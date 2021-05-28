@@ -1,0 +1,12 @@
+{
+  "ImapService": {
+    "Endpoint": {
+      "Hostname": "imap.example.com",
+      "Port": "999"
+    },
+    "Credentials": {
+      "Username": "goodguy",
+      "Password": "doinggood"
+    }
+  }
+}
