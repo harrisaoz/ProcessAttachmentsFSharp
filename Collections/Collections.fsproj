@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Conversions.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FSharpx.Collections" Version="2.1.3" />
+        <PackageReference Include="FSharpx.Collections.Experimental" Version="2.1.3" />
+    </ItemGroup>
+</Project>

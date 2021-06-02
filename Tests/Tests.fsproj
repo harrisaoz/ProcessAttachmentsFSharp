@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <Compile Include="Configuration.fs" />
+    <Compile Include="ImapFolder.fs" />
+    <Compile Include="Tree.fs" />
     <Compile Include="TypedConfiguration.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
@@ -35,6 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Collections\Collections.fsproj" />
     <ProjectReference Include="..\Configuration\Configuration.fsproj" />
     <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj" />
   </ItemGroup>

@@ -1,5 +1,6 @@
 ﻿namespace ImapAttachments
 
+open System
 open System.Net
 open MailKit.Net.Imap
 open MailKit.Security
@@ -45,3 +46,15 @@ module ImapService =
             client.Dispose()
         with
             e -> printfn $"Unexpected failure to disconnect the imap client. %s{e.Message}"
+
+    type ImapSession(parameters: Parameters) =
+        let client: ImapClient = initialize
+        let connect = tryConnect parameters.Endpoint
+        let authenticate = tryAuthenticate parameters.Credentials
+
+        member this.Open =
+            Result.Ok client |> (Result.bind connect >> Result.bind authenticate)
+
+        interface IDisposable with
+            member this.Dispose() =
+                disconnect client
