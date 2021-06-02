@@ -22,38 +22,38 @@ let lsAlwaysErrors msg _ =
         fun _ -> Result.Error msg
     ls
 
-let validateAlwaysOk k: Result<'a, string> = Result.Ok k
+let validateAlwaysOk k: Result<'a, string> =
+    Result.Ok k
 
-let validateAlwaysErrors msg: Result<'a, string> =
+let validateAlwaysErrors msg _: Result<'a, string> =
     Result.Error msg
+
+let stubList1 =
+    fun x ->
+        match x with
+        | 0 -> seq {1;2;3}
+        | _ -> Seq.empty
+
+let makeTree startVal =
+    fun validate ls -> validate startVal |> asRoseTree (asLazyLs ls validate)
 
 [<Fact>]
 let ``Traversing an invalid root should list a single error Result`` () =
-    let stubValidate _: Result<'a, string> = Result.Error "invalid root"
-    let stubLs =
-        fun x ->
-            match x with
-            | 0 -> seq {1;2;3}
-            | _ -> Seq.empty
-        |> lsAlwaysOk
+    let errorMsg = "invalid root"
+    let stubValidate = validateAlwaysErrors errorMsg
+    let stubLs = stubList1 |> lsAlwaysOk
 
     let tree = stubValidate 0 |> asRoseTree (asLazyLs stubLs stubValidate)
     let materialized = R.dfsPre tree |> Seq.toList
 
-    Assert.Equal(Result.Error "invalid root", List.head materialized)
+    Assert.Equal(Result.Error errorMsg, List.head materialized)
     Assert.Equal(1, List.length materialized)
 
 [<Fact>]
-let ``Given a root with an invalid list of children, when the root is traversed only ...`` () =
+let ``Given a root with an invalid list of children, when the root is traversed, then the root folder and an error should be listed`` () =
     let errorMsg = "failed to list children"
-    let stubLs =
-        fun x ->
-            match x with
-            | 0 -> seq {1;2;3}
-            | _ -> Seq.empty
-        |> lsAlwaysErrors errorMsg
 
-    let tree = validateAlwaysOk 0 |> asRoseTree (asLazyLs stubLs validateAlwaysOk)
+    let tree = makeTree 0 validateAlwaysOk (stubList1 |> lsAlwaysErrors errorMsg)
     let materialized = R.dfsPre tree |> Seq.toList
 
     Assert.Equal(Result.Ok 0, List.head materialized)
@@ -77,13 +77,17 @@ let ``dfsPre should traverse a RoseTree in pre-order`` () =
             | _ -> Seq.empty
         |> lsAlwaysOk
 
-    let tree = Result.Ok 0 |> asRoseTree (asLazyLs mockLs stubValidate)
-    let extract resultValue =
-        match resultValue with
-        | Result.Ok v -> v
-        | _ -> -1
-    
-    let materialized = R.dfsPre tree |> Seq.map extract
+    let tree = makeTree 0 validateAlwaysOk mockLs
+
+    let materialized =
+        R.dfsPre tree
+        |> Seq.map (
+            fun r ->
+                match r with
+                | Result.Ok v -> v
+                | _ -> -1
+            )
+
     let ``expected sequence as List`` = [0..10]
     
     Assert.Equal(0, enumerationCount)
