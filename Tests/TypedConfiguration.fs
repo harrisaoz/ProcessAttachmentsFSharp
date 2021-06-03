@@ -53,7 +53,10 @@ let ``Mailbox configuration should be loaded from the specified configuration fi
         maybeMailboxParams
         |> Option.iter (
             fun mailboxParameters ->
-                Assert.Equal("AmonitoredFolder", mailboxParameters.SourceFolder)
+                let materialized = Array.ofSeq mailboxParameters.SourceFolders
+                Assert.Equal(2, materialized.Length)
+                Assert.Contains("AmonitoredFolder", materialized)
+                Assert.Contains("AnotherFolder", materialized)
             )
-        Assert.False(maybeMailboxParams.IsNone, "Configuration parameters should not be empty")
+        Assert.False(maybeMailboxParams.IsNone, $"Configuration parameters should not be empty [{maybeMailboxParams}]")
     | Result.Error msg -> Assert.True(false, msg)

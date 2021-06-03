@@ -1,5 +1,6 @@
 // Learn more about F# at http://docs.microsoft.com/dotnet/fsharp
 
+open ImapAttachments
 open Main
 
 [<EntryPoint>]
@@ -9,9 +10,18 @@ let main argv =
         | [] -> "ProcessAttachments.json"
         | filename :: _ -> filename
 
-    Configuration.Load.fromJsonFile configFile
-    |> Processor.downloadAttachments
-    |> fun result ->
-        match result with
-        | Ok _ -> 0
-        | Error _ -> 1
+    let handleResult =
+        fun r ->
+            match r with
+            | Result.Ok _ ->
+                printfn "All good"
+                0
+            | Result.Error msg ->
+                printf $"Something went wrong [{msg}]"
+                1
+
+    configFile
+    |> Configuration.Load.fromJsonFile
+    |> Result.bind (Processor.downloadAttachments ImapFolder.personalNamespace)
+    |> handleResult
+

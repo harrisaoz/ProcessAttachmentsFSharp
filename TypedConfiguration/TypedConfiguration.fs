@@ -2,7 +2,6 @@
 
 open FSharp.Json
 
-open System.Net
 open Configuration
 open ImapAttachments
 
@@ -25,7 +24,7 @@ let credentials serviceSection =
         fun credentialsSection ->
             let read = Load.readFromSection credentialsSection
             match (read "Username", read "Password") with
-            | Some username, Some password -> Some (NetworkCredential(username, password))
+            | Some username, Some password -> Some (System.Net.NetworkCredential(username, password))
             | _ -> None
         )
 let imapServiceParameters config: ImapService.Parameters option =
@@ -43,17 +42,19 @@ let imapServiceParameters config: ImapService.Parameters option =
 
 type MailboxParameters =
     {
-        SourceFolder: string
+        SourceFolders: string seq
     }
 
 let mailboxParameters config: MailboxParameters option =
     Load.section config "Mailbox"
     |> Option.bind (
         fun mailboxSection ->
-            let read = Load.readFromSection mailboxSection
-            match (read "SourceFolder") with
-            | Some sourceFolder -> Some { SourceFolder = sourceFolder }
-            | _ -> None
+            let sourceFolders = Load.readListFromSection mailboxSection "SourceFolders"
+            
+            if (Seq.isEmpty sourceFolders) then
+                None
+            else
+                Some { SourceFolders = sourceFolders }
         )
 
 let inline generateConfiguration configurationData =

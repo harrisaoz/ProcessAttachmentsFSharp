@@ -2,7 +2,6 @@
 
 open System
 open Microsoft.Extensions.Configuration
-open Microsoft.Extensions.Configuration
 
 let tryParseInt (s: string): int option =
     try
@@ -32,9 +31,10 @@ let subsection (section: IConfigurationSection) subSectionName: IConfigurationSe
     with
         ex -> None
     
-let readList (section: IConfigurationSection) parameter =
+let readListFromSection (section: IConfigurationSection) parameter =
     section.AsEnumerable true
-    |> Seq.filter (fun (KeyValue (k, v)) -> k = parameter && (not << String.IsNullOrWhiteSpace) v)
+    |> Seq.filter (fun (KeyValue (k, v)) ->
+        k.StartsWith($"{parameter}:") && (not << String.IsNullOrWhiteSpace) v)
     |> Seq.map (fun (KeyValue (_, v)) -> v)
 
 let read (config: IConfigurationRoot) parameter =
