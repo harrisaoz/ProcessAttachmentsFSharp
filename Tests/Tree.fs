@@ -2,96 +2,118 @@
 
 open Xunit
 
-open FSharpx.Collections
+module Conv = Collections.Conversions
 
-open Collections.Conversions
+let lsCore1 x =
+    match x with
+    | 0 -> seq { 1; 2; 3 }
+    | _ -> Seq.empty
 
-module R = Experimental.RoseTree
-
-let lsAlwaysOk (f: int -> seq<int>) =
-    let ls a =
-        match a with
-        | Result.Ok x ->
-            f x |> Result.Ok
-        | Result.Error msg ->
-            Result.Error msg
-    ls
-
-let lsAlwaysErrors msg _ =
-    let ls =
-        fun _ -> Result.Error msg
-    ls
-
-let validateAlwaysOk k: Result<'a, string> =
-    Result.Ok k
-
-let validateAlwaysErrors msg _: Result<'a, string> =
-    Result.Error msg
-
-let stubList1 =
-    fun x ->
-        match x with
-        | 0 -> seq {1;2;3}
-        | _ -> Seq.empty
-
-let makeTree startVal =
-    fun validate ls -> validate startVal |> asRoseTree (asLazyLs ls validate)
+let lsCore2 x =
+    match x with
+    | 0 -> seq { 1; 6; 7 }
+    | 1 -> seq { 2; 3 }
+    | 3 -> seq { 4; 5 }
+    | 7 -> seq { 8; 9 }
+    | 9 -> seq { 10 }
+    | _ -> Seq.empty
 
 [<Fact>]
-let ``Traversing an invalid root should list a single error Result`` () =
+let ``dfsPre 1: error at root`` () =
     let errorMsg = "invalid root"
-    let stubValidate = validateAlwaysErrors errorMsg
-    let stubLs = stubList1 |> lsAlwaysOk
+    let ls _ = Seq.empty |> Result.Ok
+    let validate _ = Result.Error errorMsg
 
-    let tree = stubValidate 0 |> asRoseTree (asLazyLs stubLs stubValidate)
-    let materialized = R.dfsPre tree |> Seq.toList
+    let actual =
+        0 |> Conv.dfsPre validate ls |> Seq.toList
 
-    Assert.Equal(Result.Error errorMsg, List.head materialized)
-    Assert.Equal(1, List.length materialized)
-
-[<Fact>]
-let ``Given a root with an invalid list of children, when the root is traversed, then the root folder and an error should be listed`` () =
-    let errorMsg = "failed to list children"
-
-    let tree = makeTree 0 validateAlwaysOk (stubList1 |> lsAlwaysErrors errorMsg)
-    let materialized = R.dfsPre tree |> Seq.toList
-
-    Assert.Equal(Result.Ok 0, List.head materialized)
-    Assert.Equal(Result.Error errorMsg, List.item 1 materialized)
-    Assert.Equal(2, List.length materialized)
+    Assert.Equal(Result.Error errorMsg, List.head actual)
+    Assert.Equal(1, List.length actual)
 
 [<Fact>]
-let ``dfsPre should traverse a RoseTree in pre-order`` () =
-    let stubValidate = validateAlwaysOk
-    let mutable enumerationCount = 0
-    let mockLs =
-        fun x ->
-            match x with
-            | 0 -> seq {1; 6; 7}
-            | 1 ->
-                enumerationCount <- enumerationCount + 1
-                seq {2; 3}
-            | 3 -> seq {4; 5}
-            | 7 -> seq {8; 9}
-            | 9 -> seq {10}
-            | _ -> Seq.empty
-        |> lsAlwaysOk
+let ``dfsPre 2: childless root`` () =
+    let ls _ = Seq.empty |> Result.Ok
+    let validate = Result.Ok
 
-    let tree = makeTree 0 validateAlwaysOk mockLs
+    let actual =
+        0 |> Conv.dfsPre validate ls |> Seq.toList
 
-    let materialized =
-        R.dfsPre tree
-        |> Seq.map (
-            fun r ->
-                match r with
-                | Result.Ok v -> v
-                | _ -> -1
-            )
+    Assert.Equal(Result.Ok 0, List.head actual)
+    Assert.Equal(1, List.length actual)
 
-    let ``expected sequence as List`` = [0..10]
-    
-    Assert.Equal(0, enumerationCount)
-    Assert.Equal(``expected sequence as List``, materialized)
-    Assert.Equal(1, enumerationCount)
-    Assert.Equal(``expected sequence as List``, materialized)
-    Assert.Equal(1, enumerationCount)
+let wrapLs ls item =
+    match item with
+    | Result.Ok x -> ls x
+    | _ -> Seq.empty
+
+[<Fact>]
+let ``dfsPre 3: ok children`` () =
+    let ls = lsCore1 >> Result.Ok
+    let validate = Result.Ok
+
+    let actual =
+        0 |> Conv.dfsPre validate ls |> Seq.toList
+
+    Assert.Equal(4, List.length actual)
+    Assert.Equal(Result.Ok 0, actual.Item(0))
+    Assert.Equal(Result.Ok 1, actual.Item(1))
+    Assert.Equal(Result.Ok 2, actual.Item(2))
+    Assert.Equal(Result.Ok 3, actual.Item(3))
+
+[<Fact>]
+let ``dfsPre 4: error children`` () =
+    let errorMsg = "invalid child"
+    let ls = lsCore1 >> Result.Ok
+
+    let validate x =
+        match x with
+        | 0 -> Result.Ok 0
+        | _ -> Result.Error errorMsg
+
+    //  fixme! ls should use lsCore1, validate should fail on all but 0
+    let actual =
+        0 |> Conv.dfsPre validate ls |> Seq.toList
+
+    Assert.Equal(4, List.length actual)
+    Assert.Equal(Result.Ok 0, actual.Item(0))
+    Assert.Equal(Result.Error errorMsg, actual.Item(1))
+    Assert.Equal(Result.Error errorMsg, actual.Item(2))
+    Assert.Equal(Result.Error errorMsg, actual.Item(3))
+
+[<Fact>]
+let ``dfsPre 5: ok tree`` () =
+    let ls = lsCore2 >> Result.Ok
+    let validate = Result.Ok
+
+    let actual =
+        0 |> Conv.dfsPre validate ls |> Seq.toList
+
+    Assert.Equal(11, List.length actual)
+
+[<Fact>]
+let ``dfsPre 6: ok tree - non-root nodes should only be visited on demand`` () =
+    let mutable visitCount = 0
+
+    let ls item =
+        match item with
+        | 0 -> lsCore2 0
+        | x ->
+            visitCount <- visitCount + 1
+            lsCore2 x
+        |> Result.Ok
+
+    let validate = Result.Ok
+
+    let extractOk r =
+        match r with
+        | Result.Ok x -> x
+        | Result.Error msg -> failwith $"unexpected Error [{msg}]"
+
+    let actual =
+        0 |> Conv.dfsPre validate ls |> Seq.map extractOk
+
+    Assert.Equal(0, visitCount)
+    Assert.Equal([ 0 .. 10 ], actual)
+    Assert.Equal(10, visitCount)
+    Assert.Equal([ 0 .. 10 ], actual)
+    Assert.Equal(10, visitCount)

@@ -5,23 +5,23 @@ open FSharpx.Collections
 module L = LazyList
 module R = Experimental.RoseTree
 
-let asLazyLs (ls: Result<'a, string> -> Result<seq<'a>, string>) (validate: 'a -> Result<'a, string>) (parent: Result<'a, string>) =
-    let children = ls parent
-    match children with
-    | Result.Ok xs -> xs |> Seq.map validate
-    | Result.Error msg -> Result.Error msg |> Seq.singleton
-    |> L.ofSeq
-            
+let rec asRoseTree (ls: 'a -> seq<'a>) (item: 'a) =
+    let children = ls item
+    if (Seq.isEmpty children) then
+        R.singleton item
+    else
+        children
+        |> Seq.map (asRoseTree ls)
+        |> L.ofSeq
+        |> R.create item
 
-let rec asRoseTree =
-    fun (ls1: Result<'a, 'b> -> LazyList<Result<'a, 'b>>) (a: Result<'a, 'b>) ->
-        match a with
-        | Result.Ok _ ->
-            let children = ls1 a
-            if (Seq.isEmpty children) then
-                R.singleton a
-            else
-                let subTree = children |> L.map (asRoseTree ls1)
-                R.create a subTree
-        | Result.Error e ->
-            Result.Error e |> R.singleton
+let dfsPre (validate: 'a -> Result<'a,string>) (rawLs: 'a -> Result<seq<'a>, string>) =
+    let ls item =
+        match item with
+        | Result.Ok item ->
+            match rawLs item with
+            | Result.Ok xs -> xs |> Seq.map validate
+            | Result.Error _ -> Seq.empty
+        | Result.Error _ -> Seq.empty
+
+    validate >> asRoseTree ls >> R.dfsPre

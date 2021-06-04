@@ -1,10 +1,9 @@
 ﻿module ImapAttachments.ImapFolder
 
-open FSharpx.Collections.Experimental
 open MailKit
-
-open Collections.Conversions
 open MailKit.Net.Imap
+
+module Conv = Collections.Conversions
 
 //let traverseFolder (folder: IMailFolder) =
 //    let subfolders = folder.GetSubfolders(false)
@@ -35,17 +34,7 @@ let subfolders (folder: IMailFolder): Result<seq<IMailFolder>, string> =
     with
         ex -> ex.Message |> Result.Error
 
-let validate = openMailFolder
-
-let ls (validatedFolder: Result<IMailFolder, string>) =
-    match validatedFolder with
-    | Result.Ok folder -> subfolders folder
-    | Result.Error msg -> Result.Error msg
-
-let dfsPre folder =
-    let lazyLs = asLazyLs ls validate
-    let roseTree = validate folder |> asRoseTree lazyLs
-    RoseTree.dfsPre roseTree
+let dfsPre = Conv.dfsPre openMailFolder subfolders
 
 let saveFolderAttachments (r: Result<IMailFolder, string>) =
     match r with
