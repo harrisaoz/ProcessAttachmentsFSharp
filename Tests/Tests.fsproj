@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <Compile Include="Configuration.fs" />
-    <Compile Include="ImapFolder.fs" />
     <Compile Include="Tree.fs" />
     <Compile Include="TypedConfiguration.fs" />
     <Compile Include="Program.fs" />
