@@ -60,3 +60,16 @@ let ``Mailbox configuration should be loaded from the specified configuration fi
             )
         Assert.False(maybeMailboxParams.IsNone, $"Configuration parameters should not be empty [{maybeMailboxParams}]")
     | Result.Error msg -> Assert.True(false, msg)
+
+[<Fact>]
+let ``Attachment Storage configuration should be loaded from the specified configuration file`` () =
+    match fromJsonFile "Config4.json" with
+    | Result.Ok config ->
+        let maybeExportParams = TypedConfiguration.exportParameters config
+        maybeExportParams
+        |> Option.iter (
+            fun exportParameters ->
+                Assert.Equal("/var/data/export/attachments", exportParameters.DestinationFolder)
+            )
+        Assert.False(maybeExportParams.IsNone, $"Configuration parameters should not be empty [{maybeExportParams}]")
+    | Result.Error msg -> Assert.True(false, msg)

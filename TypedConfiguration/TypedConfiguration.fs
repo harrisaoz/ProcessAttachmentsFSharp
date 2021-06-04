@@ -4,58 +4,78 @@ open FSharp.Json
 
 open Configuration
 open ImapAttachments
+open Microsoft.Extensions.Configuration
 
 let imapServiceSectionName = "ImapService"
 
-let endpoint serviceSection: ImapService.Endpoint option =
-    Load.subsection serviceSection "Endpoint"
-    |> Option.map (
-        fun endpointSection ->
-            let read = Load.readFromSection endpointSection
-            {
-                Hostname = read "Hostname" |> Option.get
-                Port = read "Port" |> Option.bind Load.tryParseInt |> Option.defaultValue 993
-            }
-        )
+let inline getConfig load binder name container =
+    name |> (load container >> Option.bind binder)
 
-let credentials serviceSection =
-    Load.subsection serviceSection "Credentials"
-    |> Option.bind (
-        fun credentialsSection ->
-            let read = Load.readFromSection credentialsSection
-            match (read "Username", read "Password") with
-            | Some username, Some password -> Some (System.Net.NetworkCredential(username, password))
+let endpoint: IConfiguration -> ImapService.Endpoint option =
+    let binder endpointSection =
+        let read = Load.readFromSection endpointSection
+        let endpoint: ImapService.Endpoint option =
+            match (read "Hostname", read "Port") with
+            | Some hostname, maybePort ->
+                Some {
+                    Hostname = hostname
+                    Port = maybePort |> Option.bind Load.tryParseInt |> Option.defaultValue 993
+                }
             | _ -> None
-        )
-let imapServiceParameters config: ImapService.Parameters option =
-    Load.section config imapServiceSectionName
-    |> Option.bind (
-        fun serviceSection ->
-            match (endpoint serviceSection, credentials serviceSection) with
-            | Some endpoint, Some credentials ->
+        endpoint
+
+    getConfig Load.subsection binder "Endpoint"
+
+let credentials: IConfiguration -> System.Net.NetworkCredential option =
+    let binder credentialsSection =
+        let read = Load.readFromSection credentialsSection
+        match (read "Username", read "Password") with
+        | Some username, Some password -> Some (System.Net.NetworkCredential(username, password))
+        | _ -> None
+
+    getConfig Load.subsection binder "Credentials"
+
+let imapServiceParameters: IConfiguration -> ImapService.Parameters option =
+    let binder serviceSection =
+        match (endpoint serviceSection, credentials serviceSection) with
+        | Some endpoint, Some credentials ->
+            let parameters: ImapService.Parameters option =
                 Some {
                     Endpoint = endpoint
                     Credentials = credentials
                 }
-            | _ -> None
-        )
+            parameters
+        | _ -> None
+
+    getConfig Load.section binder "ImapService"
 
 type MailboxParameters =
     {
         SourceFolders: string seq
     }
 
-let mailboxParameters config: MailboxParameters option =
-    Load.section config "Mailbox"
-    |> Option.bind (
-        fun mailboxSection ->
-            let sourceFolders = Load.readListFromSection mailboxSection "SourceFolders"
-            
-            if (Seq.isEmpty sourceFolders) then
-                None
-            else
-                Some { SourceFolders = sourceFolders }
-        )
+let mailboxParameters: IConfiguration -> MailboxParameters option =
+    let sectionBinder mailboxSection =
+        let sourceFolders = Load.readListFromSection mailboxSection "SourceFolders"
+
+        if (Seq.isEmpty sourceFolders) then
+            None
+        else
+            Some { SourceFolders = sourceFolders }
+
+    getConfig Load.section sectionBinder "Mailbox"
+
+type ExportParameters =
+    {
+        DestinationFolder: string
+    }
+
+let exportParameters: IConfiguration -> ExportParameters option =
+    let sectionBinder exportSection =
+        Load.readFromSection exportSection "DestinationFolder"
+        |> Option.map (fun dest -> { DestinationFolder = dest })
+
+    getConfig Load.section sectionBinder "Export"
 
 let inline generateConfiguration configurationData =
     Json.serialize configurationData
