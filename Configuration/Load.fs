@@ -19,30 +19,30 @@ let fromJsonFile (filename: string) =
     with
         ex -> Result.Error ex.Message
 
-let section (config: IConfigurationRoot) sectionName: IConfigurationSection option =
+let section (config: IConfiguration) sectionName: IConfiguration option =
     try
-        Some (config.GetSection sectionName)
+        Some (config.GetSection sectionName :> IConfiguration)
     with
         ex -> None
 
-let subsection (section: IConfigurationSection) subSectionName: IConfigurationSection option =
+let subsection (section: IConfiguration) subSectionName: IConfiguration option =
     try
-        Some (section.GetSection subSectionName)
+        Some (section.GetSection subSectionName :> IConfiguration)
     with
         ex -> None
     
-let readListFromSection (section: IConfigurationSection) parameter =
+let readListFromSection (section: IConfiguration) parameter =
     section.AsEnumerable true
     |> Seq.filter (fun (KeyValue (k, v)) ->
         k.StartsWith($"{parameter}:") && (not << String.IsNullOrWhiteSpace) v)
     |> Seq.map (fun (KeyValue (_, v)) -> v)
 
-let read (config: IConfigurationRoot) parameter =
+let read (config: IConfiguration) parameter =
     config.Item parameter
     |> Option.ofObj
     |> Option.filter (not << String.IsNullOrWhiteSpace)
     
-let readFromSection (section: IConfigurationSection) parameter =
+let readFromSection (section: IConfiguration) parameter =
     section.Item parameter
     |> Option.ofObj
     |> Option.filter (not << String.IsNullOrWhiteSpace)
