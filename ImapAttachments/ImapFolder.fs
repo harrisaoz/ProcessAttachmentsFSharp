@@ -36,13 +36,20 @@ let subfolders (folder: IMailFolder): Result<seq<IMailFolder>, string> =
 
 let dfsPre = Conv.dfsPre openMailFolder subfolders
 
-let saveFolderAttachments (r: Result<IMailFolder, string>) =
+let save (destinationFolderName: string) =
+    fun folder ->
+        printfn $"Saving attachments to {destinationFolderName}"
+        Result.Ok folder
+
+let saveFolderAttachments (writer: IMailFolder -> Result<IMailFolder, string>) (r: Result<IMailFolder, string>) =
     match r with
     | Result.Ok folder ->
-        printfn $"[{folder.FullName}] Processed folder"
+        printfn $"[{folder.FullName}] Processing folder"
+        writer folder
     | Result.Error msg ->
         printfn $"{msg}"
-    r
+        Result.Error msg
+        
 
 let tryCloseFolder (folder: IMailFolder) =
     try
