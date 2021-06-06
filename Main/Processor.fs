@@ -7,14 +7,26 @@ open MailKit.Net.Imap
 module S = FSharp.Core.Seq
 module TC = TypedConfiguration
 
-module Processor =
-    let reportError result =
-        result
-        |> Result.mapError (fun msg ->
-            printfn $"{msg}"
-            msg)
+type TopLevelFolder = ImapClient -> FolderNamespace
+type ResultPassThrough<'a, 'b> = Result<'a, 'b> -> Result<'a, 'b>
 
-    let downloadAttachments (fNamespace: ImapClient -> FolderNamespace) config =
+module Processor =
+    let processFlow getTopLevel dfsPre save close reportError onComplete =
+        getTopLevel
+        >> Seq.collect dfsPre
+        >> Seq.map save
+        >> Seq.map close
+        >> List.ofSeq
+        >> List.map reportError
+        >> List.partition (
+            fun r ->
+                match r with
+                | Result.Ok _ -> true
+                | _ -> false
+            )
+        >> onComplete
+
+    let downloadAttachments (fNamespace: TopLevelFolder) reportError config =
         match (TC.imapServiceParameters config,
                TC.mailboxParameters config,
                TC.exportParameters config) with
@@ -22,26 +34,18 @@ module Processor =
             use session = new ImapService.ImapSession(serviceParameters)
             let save = ImapFolder.save exportParameters.DestinationFolder
 
-            match session.Open with
-            | Result.Ok client ->
-                client |>
+            let getTopLevel =
                 ImapFolder.filter fNamespace (
                     fun folder -> mailboxParameters.SourceFolders |> S.icontains folder.Name
-                    )
-                |> Seq.collect ImapFolder.dfsPre
-                |> Seq.map (ImapFolder.saveFolderAttachments save)
-                |> Seq.map ImapFolder.closeFolder
-                |> List.ofSeq
-                |> List.map reportError
-                |> List.filter (fun r ->
-                               match r with
-                               | Result.Ok  _ -> true
-                               | _ -> false)
-                |> List.length
-                |> printfn "Processed %d folders"
+                )
+            let saveAttachments = ImapFolder.saveFolderAttachments save
+            let onComplete (l1, l2) =
+                printfn $"=== Summary ==="
+                printfn $"+ %d{List.length l1} ok"
+                printfn $"! %d{List.length l2} errors"
+                printfn $"==============="
 
-                Result.Ok client
-            | Result.Error msg ->
-                Result.Error msg
+            session.Open
+            |> Result.map (processFlow getTopLevel ImapFolder.dfsPre saveAttachments ImapFolder.closeFolder reportError onComplete)
         | _ ->
             Result.Error "Failed to load configuration"

@@ -20,8 +20,15 @@ let main argv =
                 printf $"Something went wrong [{msg}]"
                 1
 
+    let passThroughLogger =
+        Result.mapError (
+            fun msg ->
+                eprintfn $"{msg}"
+                msg
+            )
+
     configFile
     |> Configuration.Load.fromJsonFile
-    |> Result.bind (Processor.downloadAttachments ImapFolder.personalNamespace)
+    |> Result.bind (Processor.downloadAttachments ImapFolder.personalNamespace passThroughLogger)
     |> handleResult
 
