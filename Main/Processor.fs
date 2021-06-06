@@ -4,9 +4,6 @@ open ImapAttachments
 open MailKit
 open MailKit.Net.Imap
 
-open ImapAttachments
-open MailKit.Net.Imap
-
 module S = FSharp.Core.Seq
 module TC = TypedConfiguration
 
