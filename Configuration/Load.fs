@@ -10,7 +10,7 @@ let tryParseInt (s: string): int option =
 
 let fromJsonText (json: string) =
     let bytes = System.Text.Encoding.UTF8.GetBytes json
-    
+
     ConfigurationBuilder().AddJsonStream(new IO.MemoryStream(bytes)).Build()
 
 let fromJsonFile (filename: string) =
@@ -25,13 +25,7 @@ let section (config: IConfiguration) sectionName: IConfiguration option =
     with
         ex -> None
 
-let subsection (section: IConfiguration) subSectionName: IConfiguration option =
-    try
-        Some (section.GetSection subSectionName :> IConfiguration)
-    with
-        ex -> None
-    
-let readListFromSection (section: IConfiguration) parameter =
+let readMany (section: IConfiguration) parameter =
     section.AsEnumerable true
     |> Seq.filter (fun (KeyValue (k, v)) ->
         k.StartsWith($"{parameter}:") && (not << String.IsNullOrWhiteSpace) v)
@@ -39,10 +33,5 @@ let readListFromSection (section: IConfiguration) parameter =
 
 let read (config: IConfiguration) parameter =
     config.Item parameter
-    |> Option.ofObj
-    |> Option.filter (not << String.IsNullOrWhiteSpace)
-    
-let readFromSection (section: IConfiguration) parameter =
-    section.Item parameter
     |> Option.ofObj
     |> Option.filter (not << String.IsNullOrWhiteSpace)

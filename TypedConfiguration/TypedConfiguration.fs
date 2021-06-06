@@ -13,7 +13,7 @@ let inline getConfig load binder name container =
 
 let endpoint: IConfiguration -> ImapService.Endpoint option =
     let binder endpointSection =
-        let read = Load.readFromSection endpointSection
+        let read = Load.read endpointSection
         let endpoint: ImapService.Endpoint option =
             match (read "Hostname", read "Port") with
             | Some hostname, maybePort ->
@@ -24,16 +24,16 @@ let endpoint: IConfiguration -> ImapService.Endpoint option =
             | _ -> None
         endpoint
 
-    getConfig Load.subsection binder "Endpoint"
+    getConfig Load.section binder "Endpoint"
 
 let credentials: IConfiguration -> System.Net.NetworkCredential option =
     let binder credentialsSection =
-        let read = Load.readFromSection credentialsSection
+        let read = Load.read credentialsSection
         match (read "Username", read "Password") with
         | Some username, Some password -> Some (System.Net.NetworkCredential(username, password))
         | _ -> None
 
-    getConfig Load.subsection binder "Credentials"
+    getConfig Load.section binder "Credentials"
 
 let imapServiceParameters: IConfiguration -> ImapService.Parameters option =
     let binder serviceSection =
@@ -56,7 +56,7 @@ type MailboxParameters =
 
 let mailboxParameters: IConfiguration -> MailboxParameters option =
     let sectionBinder mailboxSection =
-        let sourceFolders = Load.readListFromSection mailboxSection "SourceFolders"
+        let sourceFolders = Load.readMany mailboxSection "SourceFolders"
 
         if (Seq.isEmpty sourceFolders) then
             None
@@ -72,7 +72,7 @@ type ExportParameters =
 
 let exportParameters: IConfiguration -> ExportParameters option =
     let sectionBinder exportSection =
-        Load.readFromSection exportSection "DestinationFolder"
+        Load.read exportSection "DestinationFolder"
         |> Option.map (fun dest -> { DestinationFolder = dest })
 
     getConfig Load.section sectionBinder "Export"
