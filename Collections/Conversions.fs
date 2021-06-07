@@ -15,7 +15,7 @@ let rec asRoseTree (ls: 'a -> seq<'a>) (item: 'a) =
         |> L.ofSeq
         |> R.create item
 
-let dfsPre (validate: 'a -> Result<'a,string>) (rawLs: 'a -> Result<seq<'a>, string>) =
+let dfsPre (validate: 'a -> Result<'a,'b>) (rawLs: 'a -> Result<seq<'a>, 'b>) =
     let ls item =
         match item with
         | Result.Ok item ->

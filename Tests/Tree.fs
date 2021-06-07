@@ -41,11 +41,6 @@ let ``dfsPre 2: childless root`` () =
     Assert.Equal(Result.Ok 0, List.head actual)
     Assert.Equal(1, List.length actual)
 
-let wrapLs ls item =
-    match item with
-    | Result.Ok x -> ls x
-    | _ -> Seq.empty
-
 [<Fact>]
 let ``dfsPre 3: ok children`` () =
     let ls = lsCore1 >> Result.Ok
@@ -70,7 +65,6 @@ let ``dfsPre 4: error children`` () =
         | 0 -> Result.Ok 0
         | _ -> Result.Error errorMsg
 
-    //  fixme! ls should use lsCore1, validate should fail on all but 0
     let actual =
         0 |> Conv.dfsPre validate ls |> Seq.toList
 
