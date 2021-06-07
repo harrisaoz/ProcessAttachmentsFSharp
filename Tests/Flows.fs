@@ -26,7 +26,7 @@ let lsCore2 x =
 [<Fact>]
 let ``Pipeline 1: single top-level item with only direct children`` () =
     let mutable pipelineValue = -1
-    
+
     let client = 0
     let getTop client =
         match client with
@@ -50,26 +50,26 @@ let ``Pipeline 1: single top-level item with only direct children`` () =
     let onComplete (l1, l2) =
         Assert.Equal(4, List.length l1)
         Assert.Equal(0, List.length l2)
-    
+
     client
     |> Flows.DfsSequence.pipeline getTop enumerate action close reportError onComplete
 
 [<Fact>]
 let ``Pipeline 2: two top-level items each with multiple descendent generations`` () =
     let mutable pipelineValue = -1
-    
+
     let client = 0
     let stubTop client =
         match client with
         | 0 -> seq {0; 100}
         | _ -> Seq.empty
-        
+
     let validate x =
         match x with
         | x0 when 0 <= x0 && x0 <= 8 -> Result.Ok x0
         | x1 when 100 <= x1 && x1 <= 109 -> Result.Ok x1
         | xError -> Result.Error xError
-        
+
     let enumerate = Conv.dfsPre validate (lsCore2 >> Result.Ok)
     let action =
         Result.map (
@@ -99,6 +99,6 @@ let ``Pipeline 2: two top-level items each with multiple descendent generations`
         Assert.Contains(Result.Error 110, s2)
         Assert.Equal(19, List.length l1)
         Assert.Equal(2, List.length l2)
-    
+
     client
     |> Flows.DfsSequence.pipeline stubTop enumerate action close reportError onComplete
