@@ -5,9 +5,9 @@ VisualStudioVersion = 16.6.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Tests", "Tests\Tests.fsproj", "{EE28BB56-9CD7-404E-B8B7-CA43B452A1FC}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ImapAttachments", "ImapAttachments\ImapAttachments.fsproj", "{694407ED-0959-467B-9DDB-0ABAB1F4A400}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ImapKit", "ImapKit\ImapKit.fsproj", "{694407ED-0959-467B-9DDB-0ABAB1F4A400}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Main", "Main\Main.fsproj", "{99E18A0E-7F79-439E-8FE9-6C083F9637B8}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SaveAttachments", "SaveAttachments\SaveAttachments.fsproj", "{99E18A0E-7F79-439E-8FE9-6C083F9637B8}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Configuration", "Configuration\Configuration.fsproj", "{202A8BCB-18F7-4CD1-9A8B-1DAFF8265C14}"
 EndProject
@@ -16,6 +16,8 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Collections", "Collections\Collections.fsproj", "{0A56AA43-3E8A-460F-AE99-3A8645FAAC45}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Flows", "Flows\Flows.fsproj", "{5E24F2A6-2B91-4C43-B395-BB65A42C9A6C}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Execution", "Execution\Execution.fsproj", "{E9B279B3-A062-4819-A0B2-30279EF98666}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -114,5 +116,17 @@ Global
 		{5E24F2A6-2B91-4C43-B395-BB65A42C9A6C}.Release|x64.Build.0 = Release|Any CPU
 		{5E24F2A6-2B91-4C43-B395-BB65A42C9A6C}.Release|x86.ActiveCfg = Release|Any CPU
 		{5E24F2A6-2B91-4C43-B395-BB65A42C9A6C}.Release|x86.Build.0 = Release|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Debug|x64.Build.0 = Debug|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Debug|x86.Build.0 = Debug|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Release|x64.ActiveCfg = Release|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Release|x64.Build.0 = Release|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Release|x86.ActiveCfg = Release|Any CPU
+		{E9B279B3-A062-4819-A0B2-30279EF98666}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

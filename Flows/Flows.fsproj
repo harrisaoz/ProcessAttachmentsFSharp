@@ -8,5 +8,4 @@
     <ItemGroup>
       <Compile Include="DfsSequence.fs" />
     </ItemGroup>
-
 </Project>

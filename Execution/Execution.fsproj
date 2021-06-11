@@ -6,11 +6,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="TypedConfiguration.fs" />
+      <Compile Include="Templates.fs" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Configuration\Configuration.fsproj" />
-      <ProjectReference Include="..\ImapKit\ImapKit.fsproj" />
     </ItemGroup>
 </Project>

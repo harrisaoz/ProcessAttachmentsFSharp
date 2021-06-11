@@ -3,7 +3,7 @@
 open Xunit
 
 open Configuration.Load
-open ImapAttachments.ImapService
+open ImapKit.ImapService
 
 type PortStructure = { Port: int }
 

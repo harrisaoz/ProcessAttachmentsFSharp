@@ -3,7 +3,7 @@
 open FSharp.Json
 
 open Configuration
-open ImapAttachments
+open ImapKit
 open Microsoft.Extensions.Configuration
 
 let imapServiceSectionName = "ImapService"
