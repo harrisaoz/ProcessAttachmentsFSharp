@@ -21,10 +21,10 @@ let simpleDfsPre ls =
 let dfsPre (validate: 'a -> Result<'a, 'b>) (rawLs: 'a -> Result<'a seq, 'b>) =
     let ls item =
         match item with
-        | Result.Ok item ->
+        | Ok item ->
             match rawLs item with
-            | Result.Ok xs -> xs |> Seq.map validate
-            | Result.Error _ -> Seq.empty
-        | Result.Error _ -> Seq.empty
+            | Ok xs -> xs |> Seq.map validate
+            | Error _ -> Seq.empty
+        | Error _ -> Seq.empty
 
     validate >> asRoseTree ls >> R.dfsPre

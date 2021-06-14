@@ -22,17 +22,17 @@ let openMailFolder (folder: IMailFolder) =
     try
         match folder.Open(FolderAccess.ReadOnly) with
         | FolderAccess.None ->
-            Error (Seq.singleton $"ReadOnly access to the folder $s{folder.FullName} was refused")
+            Error $"ReadOnly access to the folder $s{folder.FullName} was refused"
         | _ ->
             Ok folder
     with
-        ex -> Error (Seq.singleton ex.Message)
+        ex -> Error ex.Message
 
-let subfolders (folder: IMailFolder): Result<IMailFolder seq, string seq> =
+let subfolders (folder: IMailFolder): Result<IMailFolder seq, string> =
     try
         Ok (folder.GetSubfolders(false) :> IMailFolder seq)
     with
-        ex -> Error (Seq.singleton ex.Message)
+        ex -> Error ex.Message
 
 let dfsPre = Conv.dfsPre openMailFolder subfolders
 

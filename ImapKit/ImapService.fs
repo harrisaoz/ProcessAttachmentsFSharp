@@ -26,18 +26,18 @@ let initialize: ImapClient =
 let tryConnect endpoint (client: ImapClient): Result<ImapClient, string> =
     try
         client.Connect(endpoint.Hostname, endpoint.Port, SecureSocketOptions.SslOnConnect)
-        Result.Ok client
+        Ok client
     with
         ex ->
-            Result.Error ex.Message
+            Error ex.Message
 
 let tryAuthenticate (credentials: ICredentials) (client: ImapClient): Result<ImapClient, string> =
     try
         client.Authenticate credentials
-        Result.Ok client
+        Ok client
     with
         ex ->
-            Result.Error ex.Message
+            Error ex.Message
 
 let disconnect (client: ImapClient) =
     try
@@ -52,7 +52,7 @@ type ImapSession(parameters: Parameters) =
     let authenticate = tryAuthenticate parameters.Credentials
 
     member this.Open =
-        Result.Ok client |> (Result.bind connect >> Result.bind authenticate)
+        Ok client |> (Result.bind connect >> Result.bind authenticate)
 
     interface IDisposable with
         member this.Dispose() =
