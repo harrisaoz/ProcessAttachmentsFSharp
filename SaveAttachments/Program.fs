@@ -4,9 +4,12 @@ open System.ComponentModel
 
 module ET = ProcessAttachments.Execution.Templates
 
+open System
+
 open MailKit
 open MailKit.Net.Imap
 
+open ProcessAttachments.Collections
 open ProcessAttachments.DomainInterface
 open ProcessAttachments.ImapKit.ImapService
 open FSharp.Core.Extensions
@@ -18,9 +21,6 @@ module Message = ProcessAttachments.ImapKit.ImapMessage
 let personalNamespace =
     fun (client: ImapClient) ->
         client.PersonalNamespaces.Item(0)
-
-open System
-open ProcessAttachments.Collections
 
 type FakeSession(id: int) =
     member _.Open = id
