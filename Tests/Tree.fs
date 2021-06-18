@@ -2,7 +2,7 @@
 
 open Xunit
 
-module Conv = Collections.Conversions
+module Conv = ProcessAttachments.Collections.Conversions
 
 let lsCore1 x =
     match x with

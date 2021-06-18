@@ -6,12 +6,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Compile Include="Templates.fs" />
+        <Compile Include="DomainInterface.fs" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Collections\Collections.fsproj" />
-      <ProjectReference Include="..\Configuration\Configuration.fsproj" />
-      <ProjectReference Include="..\DomainInterface\DomainInterface.fsproj" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="5.0.0" />
     </ItemGroup>
 </Project>

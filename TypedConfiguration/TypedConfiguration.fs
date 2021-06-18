@@ -3,16 +3,16 @@
 open FSharp.Json
 
 open Configuration
-open ImapKit
+open ProcessAttachments.ImapKit
 open Microsoft.Extensions.Configuration
 
 let imapServiceSectionName = "ImapService"
 
-let inline getConfig load binder name container =
-    name |> (load container >> Option.bind binder)
+let inline getConfig name binder container =
+    name |> (Load.section container >> Option.bind binder)
 
 let endpoint: IConfiguration -> ImapService.Endpoint option =
-    let binder endpointSection =
+    getConfig "Endpoint" <| fun endpointSection ->
         let read = Load.read endpointSection
         let endpoint: ImapService.Endpoint option =
             match (read "Hostname", read "Port") with
@@ -24,22 +24,18 @@ let endpoint: IConfiguration -> ImapService.Endpoint option =
             | _ -> None
         endpoint
 
-    getConfig Load.section binder "Endpoint"
-
 let credentials: IConfiguration -> System.Net.NetworkCredential option =
-    let binder credentialsSection =
+    getConfig "Credentials" <| fun credentialsSection ->
         let read = Load.read credentialsSection
         match (read "Username", read "Password") with
         | Some username, Some password -> Some (System.Net.NetworkCredential(username, password))
         | _ -> None
 
-    getConfig Load.section binder "Credentials"
-
-let imapServiceParameters: IConfiguration -> ImapService.Parameters option =
-    let binder serviceSection =
+let imapServiceParameters: IConfiguration -> ImapService.SessionParameters option =
+    getConfig "ImapService" <| fun serviceSection ->
         match (endpoint serviceSection, credentials serviceSection) with
         | Some endpoint, Some credentials ->
-            let parameters: ImapService.Parameters option =
+            let parameters: ImapService.SessionParameters option =
                 Some {
                     Endpoint = endpoint
                     Credentials = credentials
@@ -47,15 +43,13 @@ let imapServiceParameters: IConfiguration -> ImapService.Parameters option =
             parameters
         | _ -> None
 
-    getConfig Load.section binder "ImapService"
-
 type MailboxParameters =
     {
         SourceFolders: string seq
     }
 
 let mailboxParameters: IConfiguration -> MailboxParameters option =
-    let sectionBinder mailboxSection =
+    getConfig "Mailbox" <| fun mailboxSection ->
         let sourceFolders = Load.readMany mailboxSection "SourceFolders"
 
         if (Seq.isEmpty sourceFolders) then
@@ -63,19 +57,15 @@ let mailboxParameters: IConfiguration -> MailboxParameters option =
         else
             Some { SourceFolders = sourceFolders }
 
-    getConfig Load.section sectionBinder "Mailbox"
-
 type ExportParameters =
     {
         DestinationFolder: string
     }
 
 let exportParameters: IConfiguration -> ExportParameters option =
-    let sectionBinder exportSection =
+    getConfig "Export" <| fun exportSection ->
         Load.read exportSection "DestinationFolder"
         |> Option.map (fun dest -> { DestinationFolder = dest })
-
-    getConfig Load.section sectionBinder "Export"
 
 let inline generateConfiguration configurationData =
     Json.serialize configurationData

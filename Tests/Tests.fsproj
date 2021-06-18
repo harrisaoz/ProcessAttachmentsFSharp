@@ -8,7 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Collections.fs" />
     <Compile Include="Configuration.fs" />
+    <Compile Include="Execution.fs" />
     <Compile Include="Flows.fs" />
     <Compile Include="Tree.fs" />
     <Compile Include="TypedConfiguration.fs" />
@@ -39,6 +41,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Collections\Collections.fsproj" />
     <ProjectReference Include="..\Configuration\Configuration.fsproj" />
+    <ProjectReference Include="..\DomainInterface\DomainInterface.fsproj" />
+    <ProjectReference Include="..\Execution\Execution.fsproj" />
     <ProjectReference Include="..\Flows\Flows.fsproj" />
     <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj" />
   </ItemGroup>

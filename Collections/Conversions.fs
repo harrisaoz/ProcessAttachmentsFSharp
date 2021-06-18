@@ -1,4 +1,4 @@
-﻿module Collections.Conversions
+﻿module ProcessAttachments.Collections.Conversions
 
 open FSharpx.Collections
 

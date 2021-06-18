@@ -1,4 +1,4 @@
-﻿module ImapKit.ImapService
+﻿module ProcessAttachments.ImapKit.ImapService
 
 open System
 open System.Net
@@ -11,7 +11,7 @@ type Endpoint =
         Port: int
     }
 
-type Parameters =
+type SessionParameters =
     {
         Endpoint: Endpoint
         Credentials: NetworkCredential
@@ -39,6 +39,10 @@ let tryAuthenticate (credentials: ICredentials) (client: ImapClient): Result<Ima
         ex ->
             Error ex.Message
 
+let connect parameters (client: ImapClient) =
+    Ok client |>
+    (Result.bind (tryConnect parameters.Endpoint)
+     >> Result.bind (tryAuthenticate parameters.Credentials))
 let disconnect (client: ImapClient) =
     try
         client.Disconnect(true)
@@ -46,12 +50,12 @@ let disconnect (client: ImapClient) =
     with
         e -> printfn $"Unexpected failure to disconnect the imap client. %s{e.Message}"
 
-type ImapSession(parameters: Parameters) =
+type ImapSession(parameters: SessionParameters) =
     let client: ImapClient = initialize
     let connect = tryConnect parameters.Endpoint
     let authenticate = tryAuthenticate parameters.Credentials
 
-    member this.Open =
+    member _.Open =
         Ok client |> (Result.bind connect >> Result.bind authenticate)
 
     interface IDisposable with

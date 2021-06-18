@@ -15,7 +15,7 @@ let fromJsonText (json: string) =
 
 let fromJsonFile (filename: string) =
     try
-        Result.Ok (ConfigurationBuilder().AddJsonFile(filename).Build())
+        Result.Ok (ConfigurationBuilder().AddJsonFile(filename).Build() :> IConfiguration)
     with
         ex -> Result.Error ex.Message
 

@@ -1,8 +1,10 @@
-﻿module ImapKit.BodyParts
+﻿module ProcessAttachments.ImapKit.BodyParts
 
+open System
+open MailKit
 open MailKit
 
-module Conv = Collections.Conversions
+module Conv = ProcessAttachments.Collections.Conversions
 
 let asBasic (part: BodyPart) =
     match part with
@@ -30,3 +32,12 @@ let enumerateAttachments (top: BodyPart) =
         Conv.simpleDfsPre multiPartChildren body
     | _ ->
         Seq.empty
+
+let entity (folder: IMailFolder) (message: IMessageSummary) attachment =
+    try
+        folder.GetBodyPart(message.UniqueId, attachment)
+        |> Ok
+    with
+        | :? OutOfMemoryException ->
+            reraise()
+        | ex -> Error ex.Message
