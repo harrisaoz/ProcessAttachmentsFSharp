@@ -77,7 +77,7 @@ let main (behaviour: Behaviour<_, _, _, _, _, _, _, _>) argv =
         match r with
         | Result.Ok n ->
             printfn $"All good [{n}]"
-            n
+            0
         | Result.Error data ->
             printfn $"Something went wrong [{string data}]"
             1
