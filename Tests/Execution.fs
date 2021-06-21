@@ -21,8 +21,8 @@ let ``Execution flow: example 1`` () =
     let mutable leafInspectionCount = 0
     let mutable sessionId = 0
     let mutable leafInspectionSequence = Seq.empty
-    let mutable okExports = Seq.empty
-    let mutable failedExports = Seq.empty
+    let mutable completedExports = Seq.empty
+    let mutable incompleteExports = Seq.empty
 
     let behaviour = {
         defaultConfigFilename = "Config1.json"
@@ -60,9 +60,14 @@ let ``Execution flow: example 1`` () =
             | _ -> Seq.empty |> Ok
         contentItems = fun x ->
             match x with
-            | small when small < 200 -> seq { small * 10 }
-            | big when big > 700 -> seq { big * 10 }
+            | small when small < 700 -> seq { small * 10; small * 10 + 1 }
+            | big when big > 700 -> seq { big }
             | _ -> Seq.empty
+        categorise = fun x ->
+            match x with
+            | even when even % 2 = 0 -> Process x
+            | divisibleBy3 when divisibleBy3 % 3 = 0 -> Ignore
+            | _ -> Reject (string x)
         inspectNode = id
         inspectLeaf = fun l ->
             leafInspectionCount <- leafInspectionCount + 1
@@ -72,8 +77,8 @@ let ``Execution flow: example 1`` () =
             eprintfn $"[{string n}] Export content [{string l}, {string c}]"
             Ok (Convert.ToInt64 c)
         onCompletion = fun (ok, failed) ->
-            okExports <- ok
-            failedExports <- failed
+            completedExports <- ok
+            incompleteExports <- failed
             Seq.length failed
         identifyNode = string
         identifyLeaf = string
@@ -84,15 +89,12 @@ let ``Execution flow: example 1`` () =
     Assert.Equal(0, n)
     Assert.Equal(10, leafInspectionCount)
     Assert.Equal([100;101;500;700;701;800;801;802;803;804], Seq.rev leafInspectionSequence)
-    let expectedExportResults =
+    let expectedCompleteLeaves =
         [
-            (1,100,1000L);
-            (1,101,1010L);
-            (7,701,7010L);
-            (8,800,8000L);
-            (8,801,8010L);
-            (8,802,8020L);
-            (8,803,8030L);
-            (8,804,8040L)
+            (1, 101, 1010L)
+            (5, 500, 5000L)
+            (8, 800, 800L)
+            (8, 802, 802L)
+            (8, 804, 804L)
         ]
-    Assert.Equal(expectedExportResults, okExports)
+    Assert.Equal(expectedCompleteLeaves, completedExports)

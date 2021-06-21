@@ -11,22 +11,42 @@ let inspectRightSeq inspectValue (leftResult, rightResult) =
     |> ignore
     (leftResult, rightResult)
 
-let exportAttachments identifyNode identifyLeaf getContentItems export =
-    let folder acc r =
+let exportAttachments identifyNode identifyLeaf getContentItems categorise export =
+    let foldResult acc r =
         match r with
         | Ok n -> acc |> Result.map (fun a -> a + n)
         | Error data -> Error data
 
+    let foldCat (acc: ContentCategory<'a seq, 'b>) (c: ContentCategory<'a, 'b>) =
+        match c with
+        | Reject r ->
+            Reject r
+        | Ignore ->
+            acc
+        | Process p ->
+            match acc with
+            | Reject r0 ->
+                Reject r0
+            | Ignore ->
+                Process (Seq.singleton p)
+            | Process ps ->
+                Process (Seq.singleton p |> Seq.append ps)
+        
     let exportResults node leaf =
-        let result =
+        let contentCategory =
             getContentItems leaf
             |> Seq.map (
                 fun content ->
-                    export node leaf content)
-            |> Seq.fold folder (Ok 0L)
-        match result with
-        | Ok n -> Ok (node, leaf, n)
-        | Error data -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {data}"
+                    ContentCategory.map (export node leaf) (categorise content)
+                )
+            |> Seq.fold foldCat Ignore
+        match contentCategory with
+        | Reject r -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {string r}"
+        | Ignore -> Error $"[{identifyNode node} | {identifyLeaf leaf}] no content to export"
+        | Process exportResults ->
+            match (Seq.fold foldResult (Ok 0L) exportResults) with
+            | Ok n -> Ok (node, leaf, n)
+            | Error data -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {string data}"
 
     fun (leftResult, rightResult) ->
         match leftResult with
@@ -40,36 +60,36 @@ let exportAttachments identifyNode identifyLeaf getContentItems export =
         | _ -> (leftResult, Seq.empty)
         |> (fun (l,r) -> (l, r |> List.ofSeq))
 
-let partitionResults behaviour results =
+let partitionResults identifyNode identifyLeaf results =
     results
     |> List.fold (
         fun (ok, noop, err) r ->
             match r with
             | Ok (node, leaf, 0L) ->
-                eprintfn $"= {behaviour.identifyNode node} {behaviour.identifyLeaf leaf} [size 0]"
+                eprintfn $"= {identifyNode node} {identifyLeaf leaf} [size 0]"
                 (ok, List.append noop [(node, leaf, 0L)], err)
             | Ok (node, leaf, n) ->
-                eprintfn $"+ {behaviour.identifyNode node} {behaviour.identifyLeaf leaf} [size {n}]"
+                eprintfn $"+ {identifyNode node} {identifyLeaf leaf} [size {n}]"
                 (List.append ok [(node, leaf, n)], noop, err)
             | Error data ->
                 eprintfn $"- {string data}"
                 (ok, noop, List.append err [Error data])
         ) (List.empty, List.empty, List.empty)
 
-let program behaviour configuration =
-    use session = behaviour.session configuration
-    behaviour.container session
-    |> behaviour.roots configuration
-    |> RSeq.collectBoundTransform behaviour.nodes
-    |> Seq.map (Result.map behaviour.inspectNode)
-    |> Seq.map (RSeq.pairResultWithDirect (Error "empty") behaviour.leaves)
-    |> Seq.map (inspectRightSeq behaviour.inspectLeaf)
-    |> Seq.map (exportAttachments behaviour.identifyNode behaviour.identifyLeaf behaviour.contentItems behaviour.exportContent)
-    |> Seq.map (fun (l,r) -> (behaviour.closeNode l, r))
+let program b configuration =
+    use session = b.session configuration
+    b.container session
+    |> b.roots configuration
+    |> RSeq.collectBoundTransform b.nodes
+    |> Seq.map (Result.map b.inspectNode)
+    |> Seq.map (RSeq.pairResultWithDirect (Error "empty") b.leaves)
+    |> Seq.map (inspectRightSeq b.inspectLeaf)
+    |> Seq.map (exportAttachments b.identifyNode b.identifyLeaf b.contentItems b.categorise b.exportContent)
+    |> Seq.map (fun (l,r) -> (b.closeNode l, r))
     |> Seq.map snd
     |> List.concat
-    |> partitionResults behaviour
-    |> (fun (ok, _, err) -> behaviour.onCompletion (ok, err))
+    |> (partitionResults b.identifyNode b.identifyLeaf)
+    |> (fun (ok, _, err) -> b.onCompletion (ok, err))
     |> Ok
 
 let main (behaviour: Behaviour<_, _, _, _, _, _, _, _>) argv =

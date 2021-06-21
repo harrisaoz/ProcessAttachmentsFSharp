@@ -24,7 +24,11 @@ let main argv =
             ()|> Ok
         roots = fun _ _ -> seq {0} |> Ok
         nodes = fun root ->
-            let validate = Ok
+            let validate = fun x ->
+                match x with
+                | e0 when e0 = 2 -> Error (string e0)
+                | x0 when 0 <= x0 && x0 <= 8 -> Ok x0
+                | e -> Error (string e)
             let ls x =
                 match x with
                 | 0 -> seq {1;6;7}
@@ -40,17 +44,24 @@ let main argv =
             n)
         leaves = fun x ->
             match x with
-            | 1 -> seq {100; 101}
-            | 2 -> seq {200; 201; 202}
-            | 5 -> seq {500}
-            | 8 -> seq { 800 .. 804 }
-            | _ -> Seq.empty
-            |> Ok
+            | 1 -> seq {100; 101} |> Ok
+            | 2 -> seq {200; 201; 202} |> Ok
+            | 5 -> seq {500} |> Ok
+            | 6 -> Error "broken listing"
+            | 7 -> seq { 700 .. 701 } |> Ok
+            | 8 -> seq { 800 .. 804 } |> Ok
+            | 9 -> seq { 900 .. 902 } |> Ok
+            | _ -> Seq.empty |> Ok
         contentItems = fun x ->
             match x with
-            | small when small < 200 -> seq { small * 10 }
-            | big when big > 700 -> seq { big * 10 }
+            | small when small < 700 -> seq { small * 10; small * 10 + 1 }
+            | big when big > 700 -> seq { big }
             | _ -> Seq.empty
+        categorise = fun x ->
+            match x with
+            | even when even % 2 = 0 -> Process x
+            | multOf3 when multOf3 % 3 = 0 -> Ignore
+            | _ -> Reject (string x)
         exportContent = fun n l c ->
             eprintfn $"[{string n}] Export content [{string l}, {string c}]"
             Ok (Convert.ToInt64 c)

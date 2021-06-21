@@ -43,6 +43,8 @@ let main argv =
         closeNode = Folder.closeFolder
         leaves = Folder.enumerateMessages None
         contentItems = Message.dfsPre
+        categorise = fun message ->
+            Ignore // to do
         exportContent = fun folder message attachment ->
             eprintfn $"Export attachment: [{folder.FullName}] [{message.Envelope.Subject}] [{attachment.FileName}]"
             Ok 0L

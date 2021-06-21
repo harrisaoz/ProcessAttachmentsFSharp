@@ -42,7 +42,6 @@
     <ProjectReference Include="..\Configuration\Configuration.fsproj" />
     <ProjectReference Include="..\DomainInterface\DomainInterface.fsproj" />
     <ProjectReference Include="..\Execution\Execution.fsproj" />
-    <ProjectReference Include="..\Flows\Flows.fsproj" />
     <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj" />
   </ItemGroup>
 </Project>
