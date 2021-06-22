@@ -16,13 +16,6 @@ module Naming = ProcessAttachments.ImapKit.AttachmentNaming.InvoiceNaming
 module FS = ProcessAttachments.FileSystem
 module Export = ProcessAttachments.FileSystem.Export
 
-type FakeStream(name: string) =
-    member _.Create: Result<Stream option, string> =
-        eprintfn $"Creating stream: {name}"
-        new MemoryStream() :> Stream
-        |> Some
-        |> Ok
-
 let personalNamespace =
     fun (client: ImapClient) ->
         client.PersonalNamespaces.Item(0)
