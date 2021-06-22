@@ -27,6 +27,7 @@ let ``Execution flow: example 1`` () =
     let behaviour = {
         defaultConfigFilename = "Config1.json"
         configuration = fun _ -> () |> Ok
+        initialise = fun _ -> ()
         session = fun _ -> new FakeSession(17)
         container = fun s ->
             sessionId <- s.Open
@@ -58,14 +59,15 @@ let ``Execution flow: example 1`` () =
             | 8 -> seq { 800 .. 804 } |> Ok
             | 9 -> seq { 900 .. 902 } |> Ok
             | _ -> Seq.empty |> Ok
-        contentItems = fun x ->
+        contentItems = fun _ x ->
             match x with
             | small when small < 700 -> seq { small * 10; small * 10 + 1 }
             | big when big > 700 -> seq { big }
             | _ -> Seq.empty
+            |> Seq.map Ok
         categorise = fun x ->
             match x with
-            | even when even % 2 = 0 -> Process x
+            | even when even % 2 = 0 -> Accept x
             | divisibleBy3 when divisibleBy3 % 3 = 0 -> Ignore
             | _ -> Reject (string x)
         inspectNode = id

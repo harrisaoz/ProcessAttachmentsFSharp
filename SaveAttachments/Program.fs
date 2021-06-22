@@ -17,6 +17,7 @@ module FS = ProcessAttachments.FileSystem
 
 type FakeStream(name: string) =
     member _.Create: Result<Stream option, string> =
+        eprintfn $"Creating stream: {name}"
         new MemoryStream() :> Stream
         |> Some
         |> Ok
@@ -37,6 +38,7 @@ let main argv =
                | Some sessionParams, Some mailboxParams, Some exportParams ->
                    Ok (sessionParams, mailboxParams, exportParams)
                | _ -> Error "Failed to load configuration"
+        initialise = fun (_, _, exportConfig) -> FS.assertFolder exportConfig.DestinationFolder
         session = fun (sessionParams, _, _) -> new ImapSession(sessionParams)
         container = fun session -> session.Open
         roots =
@@ -57,24 +59,18 @@ let main argv =
         leaves = fun folder -> Folder.enumerateMessages None folder |> Result.map (Seq.take 3)
         contentItems = Message.dfsPre
         categorise = fun message ->
-            Process message // to do
+            Accept message // to do
         contentName = fun (folder, message, attachment) ->
             // To do: use FileNamers.FolderBasedName as the basis for implementation
             attachment.FileName
-        exportContent = fun (_, _, exportConfig) folder message attachment ->
+        exportContent = fun parent folder message attachment ->
             eprintfn $"Export attachment: [{folder.FullName}] [{message.Envelope.Subject}] [{attachment.FileName}]"
-            let parent = exportConfig.DestinationFolder
-            Parts.tryGetMimePart folder message attachment
-            |> Result.bind (
-                fun mimePart ->
-                    let name = Naming.name folder message mimePart
-                    let streamCopy part =
-                        Message.tryCopyAttachmentToStream part
-                    let absName = Path.Combine(parent, FS.sanitise name)
-                    let createStream name =
-                        FakeStream(name).Create
-                    FS.Export.writeContentToStream createStream streamCopy absName mimePart
-                )
+            let name = Naming.name folder message attachment
+            let streamCopy = Message.tryCopyAttachmentToStream
+            let absName = Path.Combine(parent.FullName, FS.sanitise name)
+            let createStream name = FakeStream(name).Create
+
+            FS.Export.writeContentToStream createStream streamCopy absName attachment
         onCompletion = fun (_, failed) ->
             List.length failed
         inspectNode = fun node ->

@@ -6,7 +6,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="DomainInterface.fs" />
+        <Compile Include="ContentCategory.fs" />
+        <Compile Include="Behaviour.fs" />
     </ItemGroup>
 
     <ItemGroup>

@@ -3,6 +3,8 @@
 open ProcessAttachments.Collections.Extensions
 open ProcessAttachments.DomainInterface
 
+module CC = ContentCategory
+
 let inspectRightSeq inspectValue (leftResult, rightResult) =
     match leftResult with
     | Ok _ ->
@@ -17,33 +19,20 @@ let exportLeafContent identifyNode identifyLeaf getContentItems categorise expor
         | Ok n -> acc |> Result.map (fun a -> a + n)
         | Error data -> Error data
 
-    let foldCat (acc: ContentCategory<'a seq, 'b>) (c: ContentCategory<'a, 'b>) =
-        match c with
-        | Reject r ->
-            Reject r
-        | Ignore ->
-            acc
-        | Process p ->
-            match acc with
-            | Reject r0 ->
-                Reject r0
-            | Ignore ->
-                Process (Seq.singleton p)
-            | Process ps ->
-                Process (Seq.singleton p |> Seq.append ps)
-        
     let exportResults node leaf =
         let contentCategory =
-            getContentItems leaf
+            getContentItems node leaf
             |> Seq.map (
-                fun content ->
-                    ContentCategory.map (export node leaf) (categorise content)
+                fun contentResult ->
+                    match contentResult with
+                    | Ok content -> ContentCategory.map (export node leaf) (categorise content)
+                    | Error data -> Reject data
                 )
-            |> Seq.fold foldCat Ignore
+            |> Seq.fold CC.folder Ignore
         match contentCategory with
         | Reject r -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {string r}"
         | Ignore -> Error $"[{identifyNode node} | {identifyLeaf leaf}] no content to export"
-        | Process exportResults ->
+        | Accept exportResults ->
             match (Seq.fold foldResult (Ok 0L) exportResults) with
             | Ok n -> Ok (node, leaf, n)
             | Error data -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {string data}"
@@ -79,7 +68,7 @@ let partitionResults identifyNode identifyLeaf results =
 let program b configuration =
     use session = b.session configuration
     let roots = b.roots configuration
-    let export = b.exportContent configuration
+    let export = b.initialise configuration |> b.exportContent
     
     let exportContent =
         exportLeafContent b.identifyNode b.identifyLeaf b.contentItems b.categorise export
@@ -98,7 +87,7 @@ let program b configuration =
     |> (fun (ok, _, err) -> b.onCompletion (ok, err))
     |> Ok
 
-let main (behaviour: Behaviour<_, _, _, _, _, _, _, _>) argv =
+let main (behaviour: Behaviour<_, _, _, _, _, _, _, _, _>) argv =
     let handleResult (r: Result<_, _>) =
         match r with
         | Result.Ok n ->
