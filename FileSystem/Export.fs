@@ -41,7 +41,7 @@ module Export =
             | ex -> Error ex.Message
 
     let writeContentToStream createStream streamCopy destStreamName source =
-        match createStream (sanitise destStreamName) with
+        match createStream destStreamName with
         | Ok (Some stream) ->
             use fStream = stream
             tryStreamCopy streamCopy fStream source

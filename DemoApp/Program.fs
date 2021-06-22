@@ -64,9 +64,9 @@ let main argv =
             | even when even % 2 = 0 -> Accept x
             | multOf3 when multOf3 % 3 = 0 -> Ignore
             | _ -> Reject (string x)
-        contentName = fun (n, l, c) -> string c
-        exportContent = fun _ n l c ->
-            eprintfn $"[{string n}] Export content [{string l}, {string c}]"
+        contentName = fun (n, l, c) -> $"[{string n}] Export content [{string l}, {string c}]"
+        exportContent = fun _ name c ->
+            eprintfn $"{name}"
             Ok (Convert.ToInt64 c)
         onCompletion = fun (_, failed) ->
             Seq.length failed

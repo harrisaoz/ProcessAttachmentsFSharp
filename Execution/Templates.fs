@@ -13,7 +13,7 @@ let inspectRightSeq inspectValue (leftResult, rightResult) =
     |> ignore
     (leftResult, rightResult)
 
-let exportLeafContent identifyNode identifyLeaf getContentItems categorise export =
+let exportLeafContent identifyNode identifyLeaf getContentItems categorise name export =
     let foldResult acc r =
         match r with
         | Ok n -> acc |> Result.map (fun a -> a + n)
@@ -25,7 +25,11 @@ let exportLeafContent identifyNode identifyLeaf getContentItems categorise expor
             |> Seq.map (
                 fun contentResult ->
                     match contentResult with
-                    | Ok content -> ContentCategory.map (export node leaf) (categorise content)
+                    | Ok content ->
+                        let item = (node, leaf, content)
+
+                        categorise content
+                        |> ContentCategory.map (name item |> export)
                     | Error data -> Reject data
                 )
             |> Seq.fold CC.folder Ignore
@@ -71,7 +75,7 @@ let program b configuration =
     let export = b.initialise configuration |> b.exportContent
     
     let exportContent =
-        exportLeafContent b.identifyNode b.identifyLeaf b.contentItems b.categorise export
+        exportLeafContent b.identifyNode b.identifyLeaf b.contentItems b.categorise b.contentName export
 
     b.container session
     |> roots

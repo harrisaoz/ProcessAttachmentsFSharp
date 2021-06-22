@@ -60,15 +60,12 @@ let main argv =
         contentItems = Message.dfsPre
         categorise = fun message ->
             Accept message // to do
-        contentName = fun (folder, message, attachment) ->
-            // To do: use FileNamers.FolderBasedName as the basis for implementation
-            attachment.FileName
-        exportContent = fun parent folder message attachment ->
-            eprintfn $"Export attachment: [{folder.FullName}] [{message.Envelope.Subject}] [{attachment.FileName}]"
-            let name = Naming.name folder message attachment
+        contentName = fun (folder, message, attachment) -> Naming.name folder message attachment
+        exportContent = fun parent name attachment ->
             let streamCopy = Message.tryCopyAttachmentToStream
             let absName = Path.Combine(parent.FullName, FS.sanitise name)
-            let createStream name = FakeStream(name).Create
+            let createStream = FS.Export.tryCreateFile
+//                FakeStream(filename).Create
 
             FS.Export.writeContentToStream createStream streamCopy absName attachment
         onCompletion = fun (_, failed) ->
