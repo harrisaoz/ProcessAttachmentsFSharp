@@ -2,7 +2,7 @@
 
 open System
 open MailKit
-open MailKit
+open MimeKit
 
 module Conv = ProcessAttachments.Collections.Conversions
 
@@ -33,10 +33,16 @@ let enumerateAttachments (top: BodyPart) =
     | _ ->
         Seq.empty
 
-let entity (folder: IMailFolder) (message: IMessageSummary) attachment =
+let notMimePartMessage folder subject contentType =
+    let text = "The MIME entity found was not a MimePart, and so will be excluded from export"
+    $"![Folder = {string folder}; Message subject = {string subject}; Content Type = {string contentType}] {text}"
+
+let tryGetMimePart (folder: IMailFolder) (message: IMessageSummary) attachment =
     try
-        folder.GetBodyPart(message.UniqueId, attachment)
-        |> Ok
+        // If this is excluding valid attachments, consider instead using MimeEntity.WriteToAsync.
+        match folder.GetBodyPart(message.UniqueId, attachment) with
+        | :? MimePart as mimePart -> mimePart |> Ok
+        | entity -> notMimePartMessage folder.FullName message.Envelope.Subject entity.ContentType |> Error
     with
         | :? OutOfMemoryException ->
             reraise()

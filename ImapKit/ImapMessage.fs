@@ -14,9 +14,5 @@ let dfsPre (summary: IMessageSummary) =
 let collect: IMessageSummary seq -> (IMessageSummary * BodyPartBasic) seq =
     Seq.collectOver dfsPre
 
-let decode (folder: IMailFolder, message: IMessageSummary, attachment: BodyPartBasic) =
-    match BodyParts.entity folder message attachment with
-    | Ok (:? MimePart as mimePart) ->
-        mimePart.Content.DecodeTo
-    | _ -> fun _ ->
-        failwith $"No MIME part found for message dated {string message.Envelope.Date} in folder {folder.FullName}"
+let tryCopyAttachmentToStream (mimePart: MimePart) =
+    mimePart.Content.DecodeTo

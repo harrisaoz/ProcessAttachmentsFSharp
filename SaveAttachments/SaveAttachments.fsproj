@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Configuration\Configuration.fsproj" />
     <ProjectReference Include="..\Execution\Execution.fsproj" />
+    <ProjectReference Include="..\FileSystem\FileSystem.fsproj" />
     <ProjectReference Include="..\ImapKit\ImapKit.fsproj" />
     <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj" />
   </ItemGroup>

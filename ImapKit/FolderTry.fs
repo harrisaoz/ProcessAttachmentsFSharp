@@ -2,6 +2,7 @@
 
 open System
 open MailKit
+open MimeKit
 
 let inline tryWithAsResult (block: unit -> 'a) =
     try
@@ -28,9 +29,9 @@ let tryGetSubfolders (folder: IMailFolder): Result<IMailFolder seq, string> =
         folder.GetSubfolders(false) :> IMailFolder seq
     )
 
-let tryFetch query headers (folder: IMailFolder) =
+let tryFetch query summaryItems (headers: HeaderId seq) (folder: IMailFolder) =
     tryWithAsResult (fun () ->
-        folder.Search(query) |> fun messages -> folder.Fetch(messages, headers)
+        folder.Search(query) |> fun messages -> folder.Fetch(messages, summaryItems, headers)
     )
 
 let tryCloseFolder (folder: IMailFolder) =

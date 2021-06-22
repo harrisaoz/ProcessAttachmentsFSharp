@@ -11,7 +11,7 @@ let inspectRightSeq inspectValue (leftResult, rightResult) =
     |> ignore
     (leftResult, rightResult)
 
-let exportAttachments identifyNode identifyLeaf getContentItems categorise export =
+let exportLeafContent identifyNode identifyLeaf getContentItems categorise export =
     let foldResult acc r =
         match r with
         | Ok n -> acc |> Result.map (fun a -> a + n)
@@ -78,13 +78,19 @@ let partitionResults identifyNode identifyLeaf results =
 
 let program b configuration =
     use session = b.session configuration
+    let roots = b.roots configuration
+    let export = b.exportContent configuration
+    
+    let exportContent =
+        exportLeafContent b.identifyNode b.identifyLeaf b.contentItems b.categorise export
+
     b.container session
-    |> b.roots configuration
+    |> roots
     |> RSeq.collectBoundTransform b.nodes
     |> Seq.map (Result.map b.inspectNode)
     |> Seq.map (RSeq.pairResultWithDirect (Error "empty") b.leaves)
     |> Seq.map (inspectRightSeq b.inspectLeaf)
-    |> Seq.map (exportAttachments b.identifyNode b.identifyLeaf b.contentItems b.categorise b.exportContent)
+    |> Seq.map exportContent
     |> Seq.map (fun (l,r) -> (b.closeNode l, r))
     |> Seq.map snd
     |> List.concat

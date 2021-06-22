@@ -1,15 +1,25 @@
-module ET = ProcessAttachments.Execution.Templates
-
+open System.IO
 open MailKit
 open MailKit.Net.Imap
 
-open ProcessAttachments.DomainInterface
-open ProcessAttachments.ImapKit.ImapService
 open FSharp.Core.Extensions
 
+open ProcessAttachments.DomainInterface
+open ProcessAttachments.ImapKit.ImapService
+
 module TC = TypedConfiguration
+module ET = ProcessAttachments.Execution.Templates
 module Folder = ProcessAttachments.ImapKit.ImapFolder
 module Message = ProcessAttachments.ImapKit.ImapMessage
+module Parts = ProcessAttachments.ImapKit.BodyParts
+module Naming = ProcessAttachments.ImapKit.AttachmentNaming.InvoiceNaming
+module FS = ProcessAttachments.FileSystem
+
+type FakeStream(name: string) =
+    member _.Create: Result<Stream option, string> =
+        new MemoryStream() :> Stream
+        |> Some
+        |> Ok
 
 let personalNamespace =
     fun (client: ImapClient) ->
@@ -30,24 +40,41 @@ let main argv =
         session = fun (sessionParams, _, _) -> new ImapSession(sessionParams)
         container = fun session -> session.Open
         roots =
+            // There is too much logic here
+            // 1. List all children of the given container
+            // 2. Filter to only those children meeting a rule based on name
             fun (_, mailboxParams, _) ->
-               let filter (node: IMailFolder) =
-                   mailboxParams.SourceFolders
+               let filter sourceFolders (node: IMailFolder) =
+                   sourceFolders
                    |> Seq.icontains node.Name
                Result.map (
                    fun container ->
                        Folder.listFoldersInNamespace personalNamespace container
-                       |> Seq.filter filter
+                       |> Seq.filter (filter mailboxParams.SourceFolders)
                    )
-        nodes = Folder.dfsPre
+        nodes = fun root -> Folder.dfsPre root |> Seq.take 1
         closeNode = Folder.closeFolder
-        leaves = Folder.enumerateMessages None
+        leaves = fun folder -> Folder.enumerateMessages None folder |> Result.map (Seq.take 3)
         contentItems = Message.dfsPre
         categorise = fun message ->
-            Ignore // to do
-        exportContent = fun folder message attachment ->
+            Process message // to do
+        contentName = fun (folder, message, attachment) ->
+            // To do: use FileNamers.FolderBasedName as the basis for implementation
+            attachment.FileName
+        exportContent = fun (_, _, exportConfig) folder message attachment ->
             eprintfn $"Export attachment: [{folder.FullName}] [{message.Envelope.Subject}] [{attachment.FileName}]"
-            Ok 0L
+            let parent = exportConfig.DestinationFolder
+            Parts.tryGetMimePart folder message attachment
+            |> Result.bind (
+                fun mimePart ->
+                    let name = Naming.name folder message mimePart
+                    let streamCopy part =
+                        Message.tryCopyAttachmentToStream part
+                    let absName = Path.Combine(parent, FS.sanitise name)
+                    let createStream name =
+                        FakeStream(name).Create
+                    FS.Export.writeContentToStream createStream streamCopy absName mimePart
+                )
         onCompletion = fun (_, failed) ->
             List.length failed
         inspectNode = fun node ->

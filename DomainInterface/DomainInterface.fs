@@ -23,7 +23,8 @@ type Behaviour<'ResolvedConfig, 'Error, 'Session, 'Container, 'Node, 'Leaf, 'Con
         leaves: 'Node -> Result<'Leaf seq, 'Error>
         contentItems: 'Leaf -> 'Content seq
         categorise: 'Content -> ContentCategory<'Content, 'Error>
-        exportContent: 'Node -> 'Leaf -> 'Content -> Result<'Export, 'Error>
+        contentName: ('Node * 'Leaf * 'Content) -> string
+        exportContent: 'ResolvedConfig -> 'Node -> 'Leaf -> 'Content -> Result<'Export, 'Error>
         onCompletion: ('Node * 'Leaf * 'Export) list * Result<'Export, 'Error> list -> int
         inspectNode: 'Node -> 'Node
         inspectLeaf: 'Leaf -> unit

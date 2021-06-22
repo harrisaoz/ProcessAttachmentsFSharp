@@ -13,6 +13,10 @@ module String =
     let split (separators: char[]) (whole: string) =
         whole.Split(separators)
 
+    let flatten labelSeparator (replacement: string) =
+        split (Array.singleton labelSeparator)
+        >> join replacement
+
 module Seq =
     let icontains needle haystack =
         Seq.filter (String.iequal needle) haystack

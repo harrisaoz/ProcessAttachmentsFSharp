@@ -2,6 +2,7 @@
 
 open MailKit
 open MailKit.Net.Imap
+open MimeKit
 
 open MailKit.Search
 open ProcessAttachments.ImapKit.FolderTry
@@ -29,16 +30,20 @@ let listFoldersInNamespace (fNamespace: ImapClient -> FolderNamespace) (client: 
 //    | _ -> Error $"Non-MIME attachment found [{attachment.ContentType.Name}]"
 
 let enumerateMessages searchQuery (folder: IMailFolder) =
-    let messageHeaders =
+    let messageFields =
         MessageSummaryItems.UniqueId
         ||| MessageSummaryItems.Envelope
         ||| MessageSummaryItems.GMailLabels
         ||| MessageSummaryItems.BodyStructure
         ||| MessageSummaryItems.Size
+        ||| MessageSummaryItems.Headers
         ||| MessageSummaryItems.ModSeq
+    let headers = seq {
+        HeaderId.ContentMd5
+    }
 
     let query = searchQuery |> Option.defaultValue SearchQuery.NotDeleted
-    tryFetch query messageHeaders folder
+    tryFetch query messageFields headers folder
     |> Result.map (fun l -> l :> IMessageSummary seq)
             
 

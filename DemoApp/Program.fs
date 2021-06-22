@@ -62,7 +62,8 @@ let main argv =
             | even when even % 2 = 0 -> Process x
             | multOf3 when multOf3 % 3 = 0 -> Ignore
             | _ -> Reject (string x)
-        exportContent = fun n l c ->
+        contentName = fun (n, l, c) -> string c
+        exportContent = fun _ n l c ->
             eprintfn $"[{string n}] Export content [{string l}, {string c}]"
             Ok (Convert.ToInt64 c)
         onCompletion = fun (_, failed) ->

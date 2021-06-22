@@ -2,9 +2,8 @@
 
 open System
 open FSharp.Core.Extensions
-
-let folderPart folderName folder =
-    folderName folder
+open MailKit
+open MimeKit
 
 let datePart (dateFormat: string) fallbackLabel (messageDate: 'm -> DateTimeOffset option) messageId message =
     match messageDate message with
@@ -14,20 +13,25 @@ let datePart (dateFormat: string) fallbackLabel (messageDate: 'm -> DateTimeOffs
 let standardDatePart messageDate messageId =
     datePart "yyyyMM" "nodate" messageDate messageId
 
-let filenamePart mimePartName mimePartDigest mimePart =
-    mimePartName mimePart |> Option.defaultValue (mimePartDigest mimePart)
+let filenamePart preferredName fallbackName mimePart =
+    preferredName mimePart |> Option.defaultValue (fallbackName mimePart)
 
 let composeName parts =
     String.join "_" parts
 
-// Functionality mimicry - delete
-//let folderBasedName (dateFormat: string) datelessLabel folderName mimePartName mimePartDigest (messageDate: 'c -> DateTimeOffset option) messageId =
-//    fun (folder: 'a) (mimePart: 'b) (message: 'c) ->
-//        let folderPart = folderName folder |> flatten "__"
-//        let datePart =
-//            match messageDate message with
-//            | Some date -> date.ToString(dateFormat)
-//            | None -> $"{datelessLabel}-{string (messageId message)}"
-//        let filenamePart = mimePart |> (mimePartName >> Option.defaultValue (mimePartDigest mimePart))
-//        
-//        $"{folderPart}_{datePart}_{filenamePart}"
+module InvoiceNaming =
+    let name (folder: IMailFolder) (message: IMessageSummary) (mimePart: MimePart) =
+        let folderName (folder: IMailFolder) = folder.FullName
+        let preferredName (part: MimePart) = part.FileName |> Option.ofObj
+        let fallbackName (part: MimePart) =
+            part.ContentMd5 |> Option.ofObj |> Option.defaultValue (part.ComputeContentMd5())
+            |> (fun digest -> $"{digest.Substring(0, 8)}.pdf")
+        let messageDate (message: IMessageSummary) = message.Envelope.Date |> Option.ofNullable
+        let messageUniqueId (message: IMessageSummary) = message.UniqueId
+
+        [|
+            folderName folder
+            standardDatePart messageDate messageUniqueId message
+            filenamePart preferredName fallbackName mimePart
+        |]
+        |> composeName

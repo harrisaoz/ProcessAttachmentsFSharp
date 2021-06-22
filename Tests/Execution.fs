@@ -73,7 +73,8 @@ let ``Execution flow: example 1`` () =
             leafInspectionCount <- leafInspectionCount + 1
             leafInspectionSequence <- Seq.cons l leafInspectionSequence
         closeNode = id
-        exportContent = fun n l c ->
+        contentName = fun (n,l,c) -> string c
+        exportContent = fun _ n l c ->
             eprintfn $"[{string n}] Export content [{string l}, {string c}]"
             Ok (Convert.ToInt64 c)
         onCompletion = fun (ok, failed) ->
