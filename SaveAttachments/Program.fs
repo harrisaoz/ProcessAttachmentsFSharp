@@ -14,6 +14,7 @@ module Message = ProcessAttachments.ImapKit.ImapMessage
 module Parts = ProcessAttachments.ImapKit.BodyParts
 module Naming = ProcessAttachments.ImapKit.AttachmentNaming.InvoiceNaming
 module FS = ProcessAttachments.FileSystem
+module Export = ProcessAttachments.FileSystem.Export
 
 type FakeStream(name: string) =
     member _.Create: Result<Stream option, string> =
@@ -61,13 +62,12 @@ let main argv =
         categorise = fun message ->
             Accept message // to do
         contentName = fun (folder, message, attachment) -> Naming.name folder message attachment
-        exportContent = fun parent name attachment ->
+        exportContent =
+            let createStream = Export.tryCreateFile
             let streamCopy = Message.tryCopyAttachmentToStream
-            let absName = Path.Combine(parent.FullName, FS.sanitise name)
-            let createStream = FS.Export.tryCreateFile
-//                FakeStream(filename).Create
-
-            FS.Export.writeContentToStream createStream streamCopy absName attachment
+            fun parent name ->
+                let absName = Path.Combine(parent.FullName, FS.sanitise name)
+                FS.Export.writeContentToStream createStream streamCopy absName
         onCompletion = fun (_, failed) ->
             List.length failed
         inspectNode = fun node ->
