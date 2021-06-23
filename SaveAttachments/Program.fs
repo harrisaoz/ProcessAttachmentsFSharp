@@ -16,6 +16,7 @@ module Naming = ProcessAttachments.ImapKit.AttachmentNaming.InvoiceNaming
 module FS = ProcessAttachments.FileSystem
 module Export = ProcessAttachments.FileSystem.Export
 module Service = ProcessAttachments.ImapKit.ImapService
+module CC = ProcessAttachments.ImapKit.Categorise
 
 let personalNamespace =
     fun (client: ImapClient) ->
@@ -56,54 +57,36 @@ let main argv =
                        Folder.listFoldersInNamespace personalNamespace container
                        |> Seq.filter (filter sourceFolders)
                    )
-        nodes =
-            fun root ->
-                Folder.dfsPre root
+        nodes = Folder.dfsPre
         closeNode = Folder.closeFolder
-        leaves =
-            fun folder ->
-                Folder.enumerateMessages None folder
+        leaves = Folder.enumerateMessages None
         contentItems = Message.dfsPre
         categorise =
-            let allowedMimeTypes = seq {
-                ContentType("application", "pdf")
-                ContentType("application", "octet-stream")
-            }
-            let ignoredMimeTypes = seq {
-                ContentType("text", "html")
-                ContentType("text", "plain")
-                ContentType("image", "png")
-                ContentType("application", "pkcs7-signature")
-            }
-            let isXMimeType (mimeTypes: ContentType seq) (contentType: ContentType) =
-                mimeTypes
-                |> Seq.exists (
-                    fun ct ->
-                        contentType.IsMimeType(ct.MediaType, ct.MediaSubtype)
-                    )
+            // To do: leave all of this to run-time configuration:
+            // - accepted MIME types
+            // - ignored MIME types
+            // - ignored filenames
+            let acceptedMimeTypes =
+                seq {
+                    ContentType("application", "pdf")
+                    ContentType("application", "octet-stream")
+                }
+            let ignoredMimeTypes =
+                seq {
+                    ContentType("text", "html")
+                    ContentType("text", "plain")
+                    ContentType("image", "png")
+                    ContentType("application", "pkcs7-signature")
+                }
 
-            let isAllowedMimeType = isXMimeType allowedMimeTypes
-            let isIgnoredMimeType = isXMimeType ignoredMimeTypes
+            let ignoredFilenames _ (filename: string) =
+                filename.Contains("detalhe")
+                || filename.EndsWith(".zip")
+                || filename.Contains("NEWSLETTER")
+                || filename.Contains("FUNDO GARANTIA")
+            let ignoredContentTypes _ = CC.isContentType ignoredMimeTypes
 
-            let shouldIgnore (maybeFilename: string option) =
-                match maybeFilename with
-                | Some filename ->
-                    filename.Contains("detalhe")
-                    || filename.EndsWith(".zip")
-                    || filename.Contains("NEWSLETTER")
-                    || filename.Contains("FUNDO GARANTIA")
-                | None -> false
-
-            fun mimePart ->
-                match (mimePart.ContentType |> Option.ofObj, mimePart.FileName) with
-                | _, filename when (shouldIgnore <| Option.ofObj filename) ->
-                    Ignore
-                | Some contentType, _ when (isIgnoredMimeType contentType) ->
-                    Ignore
-                | Some contentType, _ when (isAllowedMimeType contentType) ->
-                    Accept mimePart
-                | _ ->
-                    Reject $"[{mimePart.ContentType}] Missing or unsupported mime type"
+            CC.categorise ignoredFilenames ignoredContentTypes acceptedMimeTypes
         contentName = fun (folder, message, attachment) -> Naming.name folder message attachment
         exportContent =
             let createStream = Export.tryCreateFile

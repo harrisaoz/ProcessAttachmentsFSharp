@@ -12,6 +12,7 @@
     <Compile Include="ImapFolder.fs" />
     <Compile Include="ImapMessage.fs" />
     <Compile Include="AttachmentNaming.fs" />
+    <Compile Include="Categorise.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,5 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Collections\Collections.fsproj" />
+    <ProjectReference Include="..\DomainInterface\DomainInterface.fsproj" />
   </ItemGroup>
 </Project>
