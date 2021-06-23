@@ -55,19 +55,19 @@ let exportLeafContent getContentItems categorise name export =
         | _ -> (leftResult, Seq.empty)
         |> (fun (l,r) -> (l, r |> List.ofSeq))
 
-let partitionResults identifyNode identifyLeaf results =
+let partitionResults results =
     results
     |> List.fold (
         fun (ok, noop, err) r ->
             match r with
             | Ok (node, leaf, 0L) ->
-                eprintfn $"= {identifyNode node} {identifyLeaf leaf} [size 0]"
+//                eprintfn $"= {identifyNode node} {identifyLeaf leaf} [size 0]"
                 (ok, List.append noop [(node, leaf, 0L)], err)
             | Ok (node, leaf, n) ->
-                eprintfn $"+ {identifyNode node} {identifyLeaf leaf} [size {n}]"
+//                eprintfn $"+ {identifyNode node} {identifyLeaf leaf} [size {n}]"
                 (List.append ok [(node, leaf, n)], noop, err)
             | Error (maybeNode, maybeLeaf, data) ->
-                eprintfn $"- {string data}"
+//                eprintfn $"- {string data}"
                 (ok, noop, List.append err [(maybeNode, maybeLeaf, data)])
         ) (List.empty, List.empty, List.empty)
 
@@ -93,9 +93,8 @@ let program b configuration =
     |> Seq.map (fun (l,r) -> (b.closeNode l, r))
     |> Seq.map snd
     |> List.concat
-    |> (partitionResults b.identifyNode b.identifyLeaf)
-    |> (fun (ok, _, err) -> b.onCompletion (ok, err))
-    |> Ok
+    |> partitionResults
+    |> b.onCompletion
 
 let main (behaviour: Behaviour<_, _, _, _, _, _, _, _>) argv =
     let handleResult (r: Result<_, _>) =
@@ -110,7 +109,7 @@ let main (behaviour: Behaviour<_, _, _, _, _, _, _, _>) argv =
     let runFromConfigurationFile configFile =
         Configuration.Load.fromJsonFile configFile
         |> Result.bind behaviour.configuration
-        |> Result.bind (program behaviour)
+        |> Result.map (program behaviour)
         |> handleResult
 
     printfn "Running..."

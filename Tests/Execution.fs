@@ -83,7 +83,7 @@ let ``Execution flow: example 1`` () =
         contentName = fun (_,_,c) -> string c
         exportContent = fun _ _ c ->
             Ok (Convert.ToInt64 c)
-        onCompletion = fun (ok, failed) ->
+        onCompletion = fun (ok, _, failed) ->
             completedExports <- ok
             incompleteExports <- failed
             List.length failed

@@ -1,9 +1,14 @@
 open System.IO
+open MailKit
+open MailKit
+open MailKit
+open MailKit
 open MailKit.Net.Imap
 open MimeKit
 
 open FSharp.Core.Extensions
 
+open ProcessAttachments.Collections.Extensions
 open ProcessAttachments.DomainInterface
 
 module TC = TypedConfiguration
@@ -25,6 +30,7 @@ let personalNamespace =
 let main argv =
     let behaviour = {
         defaultConfigFilename = "ProcessAttachments.json"
+
         configuration =
             fun config ->
                match (TC.imapServiceParameters config,
@@ -33,6 +39,7 @@ let main argv =
                | Some sessionParams, Some mailboxParams, Some exportParams ->
                    Ok (sessionParams, mailboxParams, exportParams)
                | _ -> Error "Failed to load configuration"
+
         initialise =
             fun (sessionParams, mailboxParams, exportConfig) ->
                 (
@@ -43,15 +50,21 @@ let main argv =
                         mailboxParams.SourceFolders
                     )
                 )
+
         roots =
             fun (_, sourceFolders) ->
                Folder.selectFoldersInNamespace personalNamespace (
                    fun f -> sourceFolders |> Seq.icontains f.Name
                )
+
         nodes = Folder.dfsPre
+
         closeNode = Folder.closeFolder
+
         leaves = Folder.enumerateMessages None
+
         contentItems = Message.dfsPre
+
         categorise =
             // To do: leave all of this to run-time configuration:
             // - accepted MIME types
@@ -78,21 +91,51 @@ let main argv =
             let ignoredContentTypes _ = CC.isContentType ignoredMimeTypes
 
             CC.categorise ignoredFilenames ignoredContentTypes acceptedMimeTypes
+
         contentName = fun (folder, message, attachment) -> Naming.name folder message attachment
+
         exportContent =
             let createStream = Export.tryCreateFile
             let streamCopy = Message.tryCopyAttachmentToStream
+
             fun (parent, _) name ->
                 let absName = Path.Combine(parent.FullName, FS.sanitise name)
                 FS.Export.writeContentToStream createStream streamCopy absName
-        onCompletion = fun (_, failed) ->
+
+        onCompletion = fun (ok, noAction, failed) ->
+            let folderLabel = sprintf "[folder = %s]"
+            let messageLabel = sprintf "[subject = %s][date = %s]"
+            
+            let okFolder (f: IMailFolder) =
+                folderLabel f.FullName
+            let okMessage (m: IMessageSummary) =
+                messageLabel m.Envelope.Subject (string m.Envelope.Date)
+            let failFolder (mf: IMailFolder option) =
+                mf
+                |> Option.map (fun f -> f.FullName)
+                |> Option.defaultValue "?"
+                |> folderLabel
+            let failMessage (mm: IMessageSummary option) =
+                mm
+                |> Option.map (fun m -> (m.Envelope.Subject, string m.Envelope.Date))
+                |> Option.defaultValue ("?", "?")
+                |> (fun (s, d) -> messageLabel s d)
+
+            RSeq.show okFolder okMessage "+" ok
+            RSeq.show okFolder okMessage "=" noAction
+            RSeq.show failFolder failMessage "-" failed
+
             List.length failed
+
         inspectNode = fun node ->
             eprintfn $"Inspecting folder: {node.FullName}"
             node
+
         inspectLeaf = fun leaf ->
             eprintfn $"Inspecting message: {leaf.Envelope.Subject}"
+
         identifyNode = fun node -> $"[folder {node.FullName}]"
+
         identifyLeaf = fun leaf -> $"[subject {leaf.Envelope.Subject}][date {leaf.Envelope.Date}]"
     }
 

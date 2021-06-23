@@ -19,7 +19,7 @@ when 'Client :> IDisposable> =
         categorise: 'Content -> ContentCategory<'Content, 'Error>
         contentName: 'Node * 'Leaf * 'Content -> ExportItemName
         exportContent: 'Init -> ExportItemName -> 'Content -> Result<'Export, 'Error>
-        onCompletion: ('Node * 'Leaf * 'Export) list * ('Node option * 'Leaf option * 'Error) list -> int
+        onCompletion: ('Node * 'Leaf * 'Export) list * ('Node * 'Leaf * 'Export) list * ('Node option * 'Leaf option * 'Error) list -> int
         inspectNode: 'Node -> 'Node
         inspectLeaf: 'Leaf -> unit
         identifyNode: 'Node -> string

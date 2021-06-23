@@ -45,3 +45,11 @@ module RSeq =
         match r with
         | Ok xs -> Seq.collect f xs
         | Error data -> Seq.singleton (Error data)
+
+    let inline show identifyNode identifyLeaf symbol =
+        List.iter (
+            fun (n, l, s) ->
+                let nText = identifyNode n
+                let lText = identifyLeaf l
+                eprintfn $"{string symbol} {nText} {lText} {string s}"
+            )
