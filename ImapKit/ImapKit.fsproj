@@ -8,7 +8,6 @@
   <ItemGroup>
     <Compile Include="FolderTry.fs" />
     <Compile Include="ImapService.fs" />
-    <Compile Include="Defaults.fs" />
     <Compile Include="BodyParts.fs" />
     <Compile Include="ImapFolder.fs" />
     <Compile Include="ImapMessage.fs" />
