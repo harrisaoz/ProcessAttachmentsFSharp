@@ -14,7 +14,8 @@ let inspectRightSeq inspectValue (leftResult, rightResult) =
     |> ignore
     (leftResult, rightResult)
 
-let exportLeafContent identifyNode identifyLeaf getContentItems categorise name export =
+let exportLeafContent getContentItems categorise name export =
+    let error data maybeNode maybeLeaf = Error (maybeNode, maybeLeaf, data)
     let foldResult acc r =
         match r with
         | Ok n -> acc |> Result.map (fun a -> a + n)
@@ -35,12 +36,12 @@ let exportLeafContent identifyNode identifyLeaf getContentItems categorise name 
                 )
             |> Seq.fold CC.folder Ignore
         match contentCategory with
-        | Accept exportResults ->
-            match (Seq.fold foldResult (Ok 0L) exportResults) with
+        | Accept acceptedExportResults ->
+            match (Seq.fold foldResult (Ok 0L) acceptedExportResults) with
             | Ok n -> Ok (node, leaf, n)
-            | Error data -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {string data}"
-        | Ignore -> Error $"[{identifyNode node} | {identifyLeaf leaf}] no content to export"
-        | Reject r -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {string r}"
+            | Error data -> error data (Some node) (Some leaf)
+        | Ignore -> error "no content to export" (Some node) (Some leaf)
+        | Reject r -> error (string r) (Some node) (Some leaf)
 
     fun (leftResult, rightResult) ->
         match leftResult with
@@ -49,7 +50,7 @@ let exportLeafContent identifyNode identifyLeaf getContentItems categorise name 
                 match rightResult with
                 | Ok leaves ->
                     Seq.map (exportResults node) leaves
-                | Error data -> Seq.singleton <| Error data
+                | Error data -> Seq.singleton <| error data (Some node) None
             (leftResult, newRight)
         | _ -> (leftResult, Seq.empty)
         |> (fun (l,r) -> (l, r |> List.ofSeq))
@@ -65,9 +66,9 @@ let partitionResults identifyNode identifyLeaf results =
             | Ok (node, leaf, n) ->
                 eprintfn $"+ {identifyNode node} {identifyLeaf leaf} [size {n}]"
                 (List.append ok [(node, leaf, n)], noop, err)
-            | Error data ->
+            | Error (maybeNode, maybeLeaf, data) ->
                 eprintfn $"- {string data}"
-                (ok, noop, List.append err [Error data])
+                (ok, noop, List.append err [(maybeNode, maybeLeaf, data)])
         ) (List.empty, List.empty, List.empty)
 
 let program b configuration =
@@ -80,8 +81,7 @@ let program b configuration =
     let roots = b.roots init
     let export = b.exportContent init
     
-    let exportContent =
-        exportLeafContent b.identifyNode b.identifyLeaf b.contentItems b.categorise b.contentName export
+    let exportContent = exportLeafContent b.contentItems b.categorise b.contentName export
 
     connect client
     |> roots
