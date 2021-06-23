@@ -11,10 +11,18 @@ module BP = BodyParts
 
 let dfsPre = Conv.dfsPre tryOpenFolder tryGetSubfolders
 
+// * Important *
+// This does not handle exceptions in any way.
+// It is expected that the occurrence of any exceptions here should be
+// treated as a complete program failure and thus cause the program to abort.
 let listFoldersInNamespace (fNamespace: ImapClient -> FolderNamespace) (client: ImapClient) =
     client
         .GetFolder(fNamespace client)
         .GetSubfolders(false)
+
+let selectFoldersInNamespace (ns: ImapClient -> FolderNamespace) filter =
+    listFoldersInNamespace ns
+    >> Seq.filter filter
 
 let enumerateMessages searchQuery (folder: IMailFolder) =
     let messageFields =

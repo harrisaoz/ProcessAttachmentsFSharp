@@ -1,5 +1,4 @@
 open System.IO
-open MailKit
 open MailKit.Net.Imap
 open MimeKit
 
@@ -45,18 +44,12 @@ let main argv =
                     )
                 )
         roots =
-            // There is too much logic here
-            // 1. List all children of the given container
-            // 2. Filter to only those children meeting a rule based on name
             fun (_, sourceFolders) ->
-               let filter sourceFolders (node: IMailFolder) =
-                   sourceFolders
-                   |> Seq.icontains node.Name
                Result.map (
-                   fun container ->
-                       Folder.listFoldersInNamespace personalNamespace container
-                       |> Seq.filter (filter sourceFolders)
+                   Folder.selectFoldersInNamespace personalNamespace (
+                       fun f -> sourceFolders |> Seq.icontains f.Name
                    )
+               )
         nodes = Folder.dfsPre
         closeNode = Folder.closeFolder
         leaves = Folder.enumerateMessages None
