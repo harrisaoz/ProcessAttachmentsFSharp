@@ -84,7 +84,7 @@ let program b configuration =
     let exportContent = exportLeafContent b.contentItems b.categorise b.contentName export
 
     connect client
-    |> roots
+    |> Result.map roots
     |> RSeq.collectBoundTransform b.nodes
     |> Seq.map (Result.map b.inspectNode)
     |> Seq.map (RSeq.pairResultWithDirect (Error "empty") b.leaves)

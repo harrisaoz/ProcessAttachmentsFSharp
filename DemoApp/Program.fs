@@ -20,7 +20,7 @@ let main argv =
         defaultConfigFilename = "DemoApp.json"
         configuration = fun _ -> () |> Ok
         initialise = fun _ -> (new FakeSession(17), (fun (s: FakeSession) -> Ok s), ())
-        roots = fun _ _ -> seq {0} |> Ok
+        roots = fun _ _ -> seq {0}
         nodes = fun root ->
             let validate = fun x ->
                 match x with

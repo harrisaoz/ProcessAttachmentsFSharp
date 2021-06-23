@@ -37,7 +37,7 @@ let ``Execution flow: example 1`` () =
                     connectSession,
                     ()
                 )
-        roots = fun _ _ -> seq {0} |> Ok
+        roots = fun _ _ -> seq {0}
         nodes = fun root ->
             let validate = fun x ->
                 match x with

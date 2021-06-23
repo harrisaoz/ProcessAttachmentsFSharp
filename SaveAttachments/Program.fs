@@ -45,10 +45,8 @@ let main argv =
                 )
         roots =
             fun (_, sourceFolders) ->
-               Result.map (
-                   Folder.selectFoldersInNamespace personalNamespace (
-                       fun f -> sourceFolders |> Seq.icontains f.Name
-                   )
+               Folder.selectFoldersInNamespace personalNamespace (
+                   fun f -> sourceFolders |> Seq.icontains f.Name
                )
         nodes = Folder.dfsPre
         closeNode = Folder.closeFolder

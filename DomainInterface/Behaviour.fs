@@ -11,7 +11,7 @@ when 'Client :> IDisposable> =
         defaultConfigFilename: string
         configuration: IConfiguration -> Result<'ResolvedConfig, 'Error>
         initialise: 'ResolvedConfig -> 'Client * ('Client -> Result<'Client, 'Error>) * 'Init
-        roots: 'Init -> Result<'Client, 'Error> -> Result<'Node seq, 'Error>
+        roots: 'Init -> 'Client -> 'Node seq
         nodes: 'Node -> Result<'Node, 'Error> seq
         closeNode: Result<'Node, 'Error> -> Result<'Node, 'Error>
         leaves: 'Node -> Result<'Leaf seq, 'Error>
