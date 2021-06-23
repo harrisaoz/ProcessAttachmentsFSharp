@@ -43,6 +43,7 @@ let connect parameters (client: ImapClient) =
     Ok client |>
     (Result.bind (tryConnect parameters.Endpoint)
      >> Result.bind (tryAuthenticate parameters.Credentials))
+ 
 let disconnect (client: ImapClient) =
     try
         client.Disconnect(true)
