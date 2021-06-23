@@ -1,6 +1,7 @@
 open System.IO
 open MailKit
 open MailKit.Net.Imap
+open MimeKit
 
 open FSharp.Core.Extensions
 
@@ -48,12 +49,54 @@ let main argv =
                        Folder.listFoldersInNamespace personalNamespace container
                        |> Seq.filter (filter mailboxParams.SourceFolders)
                    )
-        nodes = fun root -> Folder.dfsPre root |> Seq.take 1
+        nodes =
+            fun root ->
+                Folder.dfsPre root
         closeNode = Folder.closeFolder
-        leaves = fun folder -> Folder.enumerateMessages None folder |> Result.map (Seq.take 3)
+        leaves =
+            fun folder ->
+                Folder.enumerateMessages None folder
         contentItems = Message.dfsPre
-        categorise = fun message ->
-            Accept message // to do
+        categorise =
+            let allowedMimeTypes = seq {
+                ContentType("application", "pdf")
+                ContentType("application", "octet-stream")
+            }
+            let ignoredMimeTypes = seq {
+                ContentType("text", "html")
+                ContentType("text", "plain")
+                ContentType("image", "png")
+                ContentType("application", "pkcs7-signature")
+            }
+            let isXMimeType (mimeTypes: ContentType seq) (contentType: ContentType) =
+                mimeTypes
+                |> Seq.exists (
+                    fun ct ->
+                        contentType.IsMimeType(ct.MediaType, ct.MediaSubtype)
+                    )
+
+            let isAllowedMimeType = isXMimeType allowedMimeTypes
+            let isIgnoredMimeType = isXMimeType ignoredMimeTypes
+
+            let shouldIgnore (maybeFilename: string option) =
+                match maybeFilename with
+                | Some filename ->
+                    filename.Contains("detalhe")
+                    || filename.EndsWith(".zip")
+                    || filename.Contains("NEWSLETTER")
+                    || filename.Contains("FUNDO GARANTIA")
+                | None -> false
+
+            fun mimePart ->
+                match (mimePart.ContentType |> Option.ofObj, mimePart.FileName) with
+                | _, filename when (shouldIgnore <| Option.ofObj filename) ->
+                    Ignore
+                | Some contentType, _ when (isIgnoredMimeType contentType) ->
+                    Ignore
+                | Some contentType, _ when (isAllowedMimeType contentType) ->
+                    Accept mimePart
+                | _ ->
+                    Reject $"[{mimePart.ContentType}] Missing or unsupported mime type"
         contentName = fun (folder, message, attachment) -> Naming.name folder message attachment
         exportContent =
             let createStream = Export.tryCreateFile
