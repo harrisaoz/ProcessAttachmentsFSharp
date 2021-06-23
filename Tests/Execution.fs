@@ -86,7 +86,7 @@ let ``Execution flow: example 1`` () =
         onCompletion = fun (ok, failed) ->
             completedExports <- ok
             incompleteExports <- failed
-            Seq.length failed
+            List.length failed
         identifyNode = string
         identifyLeaf = string
     }

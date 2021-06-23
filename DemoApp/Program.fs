@@ -66,7 +66,7 @@ let main argv =
             eprintfn $"{name}"
             Ok (Convert.ToInt64 c)
         onCompletion = fun (_, failed) ->
-            Seq.length failed
+            List.length failed
         inspectNode = fun n ->
             eprintfn $"[{string n}] node"
             n
