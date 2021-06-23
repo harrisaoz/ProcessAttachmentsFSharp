@@ -35,12 +35,12 @@ let exportLeafContent identifyNode identifyLeaf getContentItems categorise name 
                 )
             |> Seq.fold CC.folder Ignore
         match contentCategory with
-        | Reject r -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {string r}"
-        | Ignore -> Error $"[{identifyNode node} | {identifyLeaf leaf}] no content to export"
         | Accept exportResults ->
             match (Seq.fold foldResult (Ok 0L) exportResults) with
             | Ok n -> Ok (node, leaf, n)
             | Error data -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {string data}"
+        | Ignore -> Error $"[{identifyNode node} | {identifyLeaf leaf}] no content to export"
+        | Reject r -> Error $"[{identifyNode node} | {identifyLeaf leaf}] {string r}"
 
     fun (leftResult, rightResult) ->
         match leftResult with
