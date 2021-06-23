@@ -50,15 +50,3 @@ let disconnect (client: ImapClient) =
         client.Dispose()
     with
         e -> printfn $"Unexpected failure to disconnect the imap client. %s{e.Message}"
-
-type ImapSession(parameters: SessionParameters) =
-    let client: ImapClient = initialize
-    let connect = tryConnect parameters.Endpoint
-    let authenticate = tryAuthenticate parameters.Credentials
-
-    member _.Open =
-        Ok client |> (Result.bind connect >> Result.bind authenticate)
-
-    interface IDisposable with
-        member this.Dispose() =
-            disconnect client

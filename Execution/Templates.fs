@@ -1,5 +1,6 @@
 ﻿module ProcessAttachments.Execution.Templates
 
+open System
 open ProcessAttachments.Collections.Extensions
 open ProcessAttachments.DomainInterface
 
@@ -70,14 +71,19 @@ let partitionResults identifyNode identifyLeaf results =
         ) (List.empty, List.empty, List.empty)
 
 let program b configuration =
-    use session = b.session configuration
-    let roots = b.roots configuration
-    let export = b.initialise configuration |> b.exportContent
+    let parameters = b.initialise configuration
+    let _, connect, init = parameters
+    use client =
+        match parameters with
+        | client0, _, _ -> client0
+
+    let roots = b.roots init
+    let export = b.exportContent init
     
     let exportContent =
         exportLeafContent b.identifyNode b.identifyLeaf b.contentItems b.categorise b.contentName export
 
-    b.container session
+    connect client
     |> roots
     |> RSeq.collectBoundTransform b.nodes
     |> Seq.map (Result.map b.inspectNode)
@@ -91,7 +97,7 @@ let program b configuration =
     |> (fun (ok, _, err) -> b.onCompletion (ok, err))
     |> Ok
 
-let main (behaviour: Behaviour<_, _, _, _, _, _, _, _, _>) argv =
+let main (behaviour: Behaviour<_, _, _, _, _, _, _, _>) argv =
     let handleResult (r: Result<_, _>) =
         match r with
         | Result.Ok n ->

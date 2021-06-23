@@ -27,11 +27,16 @@ let ``Execution flow: example 1`` () =
     let behaviour = {
         defaultConfigFilename = "Config1.json"
         configuration = fun _ -> () |> Ok
-        initialise = fun _ -> ()
-        session = fun _ -> new FakeSession(17)
-        container = fun s ->
-            sessionId <- s.Open
-            ()|> Ok
+        initialise =
+            let connectSession (s: FakeSession) =
+                sessionId <- s.Open
+                Ok s
+            fun _ ->
+                (
+                    new FakeSession(17),
+                    connectSession,
+                    ()
+                )
         roots = fun _ _ -> seq {0} |> Ok
         nodes = fun root ->
             let validate = fun x ->
@@ -75,8 +80,8 @@ let ``Execution flow: example 1`` () =
             leafInspectionCount <- leafInspectionCount + 1
             leafInspectionSequence <- Seq.cons l leafInspectionSequence
         closeNode = id
-        contentName = fun (n,l,c) -> string c
-        exportContent = fun _ name c ->
+        contentName = fun (_,_,c) -> string c
+        exportContent = fun _ _ c ->
             Ok (Convert.ToInt64 c)
         onCompletion = fun (ok, failed) ->
             completedExports <- ok

@@ -6,7 +6,6 @@ open MimeKit
 open FSharp.Core.Extensions
 
 open ProcessAttachments.DomainInterface
-open ProcessAttachments.ImapKit.ImapService
 
 module TC = TypedConfiguration
 module ET = ProcessAttachments.Execution.Templates
@@ -16,6 +15,7 @@ module Parts = ProcessAttachments.ImapKit.BodyParts
 module Naming = ProcessAttachments.ImapKit.AttachmentNaming.InvoiceNaming
 module FS = ProcessAttachments.FileSystem
 module Export = ProcessAttachments.FileSystem.Export
+module Service = ProcessAttachments.ImapKit.ImapService
 
 let personalNamespace =
     fun (client: ImapClient) ->
@@ -33,21 +33,28 @@ let main argv =
                | Some sessionParams, Some mailboxParams, Some exportParams ->
                    Ok (sessionParams, mailboxParams, exportParams)
                | _ -> Error "Failed to load configuration"
-        initialise = fun (_, _, exportConfig) -> FS.assertFolder exportConfig.DestinationFolder
-        session = fun (sessionParams, _, _) -> new ImapSession(sessionParams)
-        container = fun session -> session.Open
+        initialise =
+            fun (sessionParams, mailboxParams, exportConfig) ->
+                (
+                    Service.initialize,
+                    Service.connect sessionParams,
+                    (
+                        FS.assertFolder exportConfig.DestinationFolder,
+                        mailboxParams.SourceFolders
+                    )
+                )
         roots =
             // There is too much logic here
             // 1. List all children of the given container
             // 2. Filter to only those children meeting a rule based on name
-            fun (_, mailboxParams, _) ->
+            fun (_, sourceFolders) ->
                let filter sourceFolders (node: IMailFolder) =
                    sourceFolders
                    |> Seq.icontains node.Name
                Result.map (
                    fun container ->
                        Folder.listFoldersInNamespace personalNamespace container
-                       |> Seq.filter (filter mailboxParams.SourceFolders)
+                       |> Seq.filter (filter sourceFolders)
                    )
         nodes =
             fun root ->
@@ -101,7 +108,7 @@ let main argv =
         exportContent =
             let createStream = Export.tryCreateFile
             let streamCopy = Message.tryCopyAttachmentToStream
-            fun parent name ->
+            fun (parent, _) name ->
                 let absName = Path.Combine(parent.FullName, FS.sanitise name)
                 FS.Export.writeContentToStream createStream streamCopy absName
         onCompletion = fun (_, failed) ->
