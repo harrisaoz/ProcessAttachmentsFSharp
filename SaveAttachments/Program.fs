@@ -1,8 +1,5 @@
 open System.IO
 open MailKit
-open MailKit
-open MailKit
-open MailKit
 open MailKit.Net.Imap
 open MimeKit
 
