@@ -61,13 +61,10 @@ let partitionResults results =
         fun (ok, noop, err) r ->
             match r with
             | Ok (node, leaf, 0L) ->
-//                eprintfn $"= {identifyNode node} {identifyLeaf leaf} [size 0]"
                 (ok, List.append noop [(node, leaf, 0L)], err)
             | Ok (node, leaf, n) ->
-//                eprintfn $"+ {identifyNode node} {identifyLeaf leaf} [size {n}]"
                 (List.append ok [(node, leaf, n)], noop, err)
             | Error (maybeNode, maybeLeaf, data) ->
-//                eprintfn $"- {string data}"
                 (ok, noop, List.append err [(maybeNode, maybeLeaf, data)])
         ) (List.empty, List.empty, List.empty)
 
