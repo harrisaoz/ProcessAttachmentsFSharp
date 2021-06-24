@@ -1,6 +1,5 @@
 ﻿module ProcessAttachments.ImapKit.ImapService
 
-open System
 open System.Net
 open MailKit.Net.Imap
 open MailKit.Security
