@@ -54,7 +54,7 @@ let main argv =
                    fun f -> sourceFolders |> Seq.icontains f.Name
                )
 
-        nodes = Folder.dfsPre
+        nodes = Folder.dfs
 
         closeNode = Folder.closeFolder
 

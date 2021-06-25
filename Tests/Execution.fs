@@ -46,14 +46,14 @@ let ``Execution flow: example 1`` () =
                 | e -> Error (string e)
             let ls x =
                 match x with
-                | 0 -> seq {1;6;7}
-                | 1 -> seq {2;3;4}
-                | 4 -> seq {5}
-                | 7 -> seq {8;9}
-                | 9 -> seq {10}
+                | 0 -> seq {5;6;8;10}
+                | 4 -> seq {3}
+                | 5 -> seq {1;2;4}
+                | 8 -> seq {7}
+                | 10 -> seq {9}
                 | _ -> Seq.empty
                 |> Ok
-            Conversions.dfsPre validate ls root
+            Conversions.dfsPost validate ls root
         leaves = fun x ->
             match x with
             | 1 -> seq {100; 101} |> Ok

@@ -30,18 +30,20 @@ let main argv =
         nodes = fun root ->
             let validate = fun x ->
                 match x with
+                | 2 -> Error (string x)
                 | e0 when e0 = 2 -> Error (string e0)
                 | x0 when 0 <= x0 && x0 <= 8 -> Ok x0
                 | e -> Error (string e)
             let ls x =
                 match x with
-                | 0 -> seq {1;6;7}
-                | 1 -> seq {2;3;4}
-                | 4 -> seq {5}
-                | 7 -> seq {8;9}
+                | 0 -> seq {5;6;8;10}
+                | 4 -> seq {3}
+                | 5 -> seq {1;2;4}
+                | 8 -> seq {7}
+                | 10 -> seq {9}
                 | _ -> Seq.empty
                 |> Ok
-            Conversions.dfsPre validate ls root
+            Conversions.dfsPost validate ls root
 
         closeNode = Result.map (fun n ->
             eprintfn $"[{string n}] Closing node"

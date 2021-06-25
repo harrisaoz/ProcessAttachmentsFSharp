@@ -9,7 +9,7 @@ open ProcessAttachments.ImapKit.FolderTry
 module Conv = ProcessAttachments.Collections.Conversions
 module BP = BodyParts
 
-let dfsPre = Conv.dfsPre tryOpenFolder tryGetSubfolders
+let dfs = Conv.dfsPost tryOpenFolder tryGetSubfolders
 
 // * Important *
 // This does not handle exceptions in any way.
