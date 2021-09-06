@@ -44,7 +44,7 @@ module RSeq =
     let inline collectBoundTransform f r =
         match r with
         | Ok xs -> Seq.collect f xs
-        | Error data -> Seq.singleton (Error data)
+        | err -> Seq.singleton err
 
     let inline show identifyNode identifyLeaf symbol =
         List.iter (
