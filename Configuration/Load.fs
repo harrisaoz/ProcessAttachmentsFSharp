@@ -3,21 +3,38 @@
 open System
 open Microsoft.Extensions.Configuration
 
+type ConfigurationSource =
+    | ConfigurationFile of name: string
+    | JsonText of json: string
+
+type ProgramConfiguration =
+    | ProgramConfiguration of config: IConfiguration
+
 let tryParseInt (s: string): int option =
     try
         s |> int |> Some
     with :? FormatException -> None
 
 let fromJsonText (json: string) =
-    let bytes = System.Text.Encoding.UTF8.GetBytes json
+    try
+        let bytes = System.Text.Encoding.UTF8.GetBytes json
 
-    ConfigurationBuilder().AddJsonStream(new IO.MemoryStream(bytes)).Build()
+        ConfigurationBuilder().AddJsonStream(new IO.MemoryStream(bytes)).Build() :> IConfiguration
+        |> Ok
+    with
+        ex -> Result.Error ex.Message
 
 let fromJsonFile (filename: string) =
     try
-        Result.Ok (ConfigurationBuilder().AddJsonFile(filename).Build() :> IConfiguration)
+        ConfigurationBuilder().AddJsonFile(filename).Build() :> IConfiguration
+        |> Ok
     with
         ex -> Result.Error ex.Message
+
+let fromSource source =
+    match source with
+    | ConfigurationFile filename -> fromJsonFile filename
+    | JsonText json -> fromJsonText json
 
 let section (config: IConfiguration) sectionName: IConfiguration option =
     try

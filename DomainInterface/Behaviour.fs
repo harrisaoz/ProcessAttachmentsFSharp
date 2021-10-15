@@ -1,6 +1,7 @@
 ﻿namespace ProcessAttachments.DomainInterface
 
 open System
+open Combinators
 open Microsoft.Extensions.Configuration
 
 type ExportItemName = string
@@ -16,9 +17,9 @@ when 'Client :> IDisposable> =
         closeNode: Result<'Node, 'Error> -> Result<'Node, 'Error>
         leaves: 'Node -> Result<'Leaf seq, 'Error>
         contentItems: 'Node -> 'Leaf -> Result<'Content, 'Error> seq
-        categorise: 'Content -> ContentCategory<'Content, 'Error>
+        categorise: 'Content -> TernaryResult<'Content, 'Error>
         contentName: 'Node * 'Leaf * 'Content -> ExportItemName
-        exportContent: 'Init -> ExportItemName -> 'Content -> Result<'Export, 'Error>
+        exportContent: 'Init -> ExportItemName -> 'Content -> TernaryResult<'Export, 'Error>
         onCompletion: ('Node * 'Leaf * 'Export) list * ('Node * 'Leaf * 'Export) list * ('Node option * 'Leaf option * 'Error) list -> int
         inspectNode: 'Node -> 'Node
         inspectLeaf: 'Leaf -> unit

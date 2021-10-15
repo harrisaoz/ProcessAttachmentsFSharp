@@ -1,13 +1,12 @@
-﻿open ProcessAttachments.Collections.Extensions
-
-module ET = ProcessAttachments.Execution.Templates
+﻿module ET = ProcessAttachments.Execution.Templates
 
 open System
 
-open FSharp.Core.Extensions
-
 open ProcessAttachments.Collections
 open ProcessAttachments.DomainInterface
+open Combinators
+
+open Microsoft.FSharp.Core
 
 type FakeSession(id: int) =
     member _.Open = id
@@ -70,23 +69,31 @@ let main argv =
 
         categorise = fun x ->
             match x with
-            | even when even % 2 = 0 -> Accept x
+            | even when even % 2 = 0 -> TernaryResult.Ok x
             | multOf3 when multOf3 % 3 = 0 -> Ignore
-            | _ -> Reject (string x)
+            | _ -> TernaryResult.Error (string x)
 
         contentName = fun (n, l, c) -> $"[{string n}] Export content [{string l}, {string c}]"
 
         exportContent = fun _ name c ->
             eprintfn $"{name}"
-            Ok (Convert.ToInt64 c)
+            TernaryResult.Ok (Convert.ToInt64 c)
 
         onCompletion = fun (ok, noAction, failed) ->
             let identOk = string
             let identFail m = m |> Option.map string |> Option.defaultValue "?"
 
-            RSeq.show identOk identOk "+" ok
-            RSeq.show identOk identOk "=" noAction
-            RSeq.show identFail identFail "-" failed
+            let inline show identifyNode identifyLeaf symbol =
+                List.iter (
+                    fun (n, l, s) ->
+                        let nText = identifyNode n
+                        let lText = identifyLeaf l
+                        eprintfn $"{string symbol} {nText} {lText} {string s}"
+                    )
+
+            show identOk identOk "+" ok
+            show identOk identOk "=" noAction
+            show identFail identFail "-" failed
 
             List.length failed
 

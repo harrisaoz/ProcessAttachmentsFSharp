@@ -1,17 +1,13 @@
 ﻿module ProcessAttachments.ImapKit.Categorise
 
 open MimeKit
-open ProcessAttachments.DomainInterface
+open Combinators
 
-let isA p xs maybeX =
-    match maybeX with
-    | Some x0 -> xs |> Seq.exists (p x0)
-    | None -> false
+let contentTypesEqual: ContentType -> ContentType -> bool =
+    fun a b -> a.IsMimeType(b.MediaType, b.MediaSubtype)
 
-let isContentType referenceTypes underTest =
-    isA (
-        fun (a: ContentType) (b: ContentType) -> a.IsMimeType(b.MediaType, b.MediaSubtype)
-    ) referenceTypes underTest
+let isContentType: ContentType seq -> ContentType option -> bool =
+    Seq.maybeExistsWhere contentTypesEqual
 
 let categorise filenameTest contentTypeTest acceptable (mimePart: MimePart) =
     let maybeContentType, maybeFilename =
@@ -30,5 +26,5 @@ let categorise filenameTest contentTypeTest acceptable (mimePart: MimePart) =
     | true -> Ignore
     | false ->
         match isContentType acceptable maybeContentType with
-        | true -> Accept mimePart
-        | false -> Reject $"[{string maybeContentType} Missing or unsupported MIME type"
+        | true -> Ok mimePart
+        | false -> Error $"[{string maybeContentType} Missing or unsupported MIME type"

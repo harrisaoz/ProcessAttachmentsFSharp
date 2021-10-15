@@ -2,7 +2,7 @@
 
 open Xunit
 
-open FSharp.Core.Extensions
+open Combinators
 
 let e1 f x =
     match x with

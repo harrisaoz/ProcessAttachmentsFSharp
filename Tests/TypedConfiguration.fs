@@ -12,10 +12,13 @@ let ``Generated configuration should match input`` () =
     { Hostname = "test"; Port = 123 }
     |> TypedConfiguration.generateConfiguration
     |> fromJsonText
-    |> fun config ->
-        let r = read config
-        Assert.Equal("test", r "hostname" |> Option.get)
-        Assert.Equal("123", r "port" |> Option.get)
+    |> Result.map (
+        fun config ->
+            let r = read config
+            Assert.Equal("test", r "hostname" |> Option.get)
+            Assert.Equal("123", r "port" |> Option.get)
+        )
+    |> ignore
 
 [<Fact>]
 let ``Given an integer-valued configuration parameter, when it is parsed, the result should be Some integer`` () =
@@ -23,9 +26,12 @@ let ``Given an integer-valued configuration parameter, when it is parsed, the re
     { Port = portVal }
     |> TypedConfiguration.generateConfiguration
     |> fromJsonText
-    |> fun config ->
-        let r p = read config p |> Option.bind tryParseInt |> Option.get
-        Assert.True(r "Port" = portVal)
+    |> Result.map (
+        fun config ->
+            let r p = read config p |> Option.bind tryParseInt |> Option.get
+            Assert.True(r "Port" = portVal)
+        )
+    |> ignore
 
 [<Fact>]
 let ``IMAP endpoint configuration should be loaded from the specified configuration file`` () =

@@ -4,7 +4,6 @@ open MailKit
 open MimeKit
 
 module BP = BodyParts
-open FSharp.Core.Extensions
 
 let dfsPre (folder: IMailFolder) (message: IMessageSummary) =
     message.Body

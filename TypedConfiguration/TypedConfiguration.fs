@@ -2,9 +2,32 @@
 
 open FSharp.Json
 
+open Combinators.Standard
+open Combinators
 open Configuration
+open MimeKit
 open ProcessAttachments.ImapKit
 open Microsoft.Extensions.Configuration
+
+let existsWhere: ('a -> 'b -> bool) -> 'b seq -> 'a option -> bool =
+    fun p xs ->
+        Option.exists (p >> Seq.exists >> (T xs))
+
+let anyMaybePredicate (ps: ('a -> bool) seq): 'a -> bool =
+    (C Seq.existsPredicate) ps
+
+let maybeExistsPredicate (m: 'a option): ('a -> bool) seq -> bool =
+    (C (C Seq.existsPredicate >> Option.exists)) m
+
+let anyPredicate (ps: ('a -> bool) seq): 'a option -> bool =
+    (C Seq.existsPredicate >> Option.exists) ps
+// equivalent to:
+//        fun ps m ->
+//            match m with
+//            | Some x -> Seq.exists (fun p -> p x) ps
+//            | None -> false
+
+let eitherForG f = S (f >> (||))
 
 let imapServiceSectionName = "ImapService"
 
@@ -46,16 +69,24 @@ let imapServiceParameters: IConfiguration -> ImapService.SessionParameters optio
 type MailboxParameters =
     {
         SourceFolders: string seq
+        ProcessedSubfolder: string
+        AttentionSubfolder: string
     }
 
 let mailboxParameters: IConfiguration -> MailboxParameters option =
     getConfig "Mailbox" <| fun mailboxSection ->
         let sourceFolders = Load.readMany mailboxSection "SourceFolders"
+        let processedSubfolder = Load.read mailboxSection "ProcessedSubfolder"
+        let attentionSubfolder = Load.read mailboxSection "AttentionSubfolder"
 
-        if (Seq.isEmpty sourceFolders) then
-            None
-        else
-            Some { SourceFolders = sourceFolders }
+        match (sourceFolders |> List.ofSeq, processedSubfolder, attentionSubfolder) with
+        | _ :: _, Some processed, Some attention ->
+            Some {
+                SourceFolders = sourceFolders
+                ProcessedSubfolder = processed
+                AttentionSubfolder = attention
+            }
+        | _ -> None
 
 type ExportParameters =
     {
@@ -69,3 +100,60 @@ let exportParameters: IConfiguration -> ExportParameters option =
 
 let inline generateConfiguration configurationData =
     Json.serialize configurationData
+
+type AttachmentCategorisationParameters =
+    {
+        AcceptedMimeTypes: ContentType seq
+        IgnoredMimeTypes: ContentType seq
+        IgnoreBasedOnFilename: string option -> bool
+    }
+
+let categorisationParameters: IConfiguration -> AttachmentCategorisationParameters option =
+    let contentTypeFromString (fullName: string) =
+        match fullName.Split("/") with
+        | [|mimeType; subType|] -> Some <| ContentType(mimeType, subType)
+        | _ -> None
+
+    let cons x xs =
+        seq {
+            yield x
+            for x0 in xs do
+                yield x0
+        }
+
+    let readAsContentTypes section subsection =
+        Load.readMany section subsection
+        |> Seq.map contentTypeFromString
+        |> Seq.fold (fun contentTypes contentTypeOption ->
+            match contentTypeOption with
+            | Some contentType -> cons contentType contentTypes
+            | None -> contentTypes) Seq.empty
+
+    let ignoreFilenameSection section =
+        Load.section section "IgnoreFilename"
+
+    // Preferable to List.map + pattern matching, due to the need to match all possible patterns in assignment.
+    let applyToBoth f a b = (f a, f b)
+
+    getConfig "Categorisation" <| fun section ->
+        let acceptedMimeTypes, ignoredMimeTypes =
+            applyToBoth (readAsContentTypes section) "AcceptedMimeTypes" "IgnoredMimeTypes"
+        let ignoreContains, ignoreEndsWith =
+            match ignoreFilenameSection section with
+            | Some filenameSection ->
+                applyToBoth (Load.readMany filenameSection) "Contains" "EndsWith"
+            | None -> (Seq.empty, Seq.empty)
+
+        if (Seq.isEmpty acceptedMimeTypes && Seq.isEmpty ignoredMimeTypes) then
+            None
+        else
+            Some {
+                AcceptedMimeTypes = acceptedMimeTypes
+                IgnoredMimeTypes = ignoredMimeTypes
+                IgnoreBasedOnFilename =
+                     C Seq.existsPredicate <| seq
+                         {
+                             existsWhere String.contains ignoreContains
+                             existsWhere String.endsWith ignoreEndsWith
+                         }
+            }

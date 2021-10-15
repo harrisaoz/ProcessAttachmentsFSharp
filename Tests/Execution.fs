@@ -9,6 +9,9 @@ open ProcessAttachments.Collections
 open ProcessAttachments.Execution.Templates
 open ProcessAttachments.DomainInterface
 
+open Combinators
+open Microsoft.FSharp.Core
+
 type FakeSession(id: int) =
     member _.Open = id
     
@@ -72,9 +75,9 @@ let ``Execution flow: example 1`` () =
             |> Seq.map Ok
         categorise = fun x ->
             match x with
-            | even when even % 2 = 0 -> Accept x
+            | even when even % 2 = 0 -> TernaryResult.Ok x
             | divisibleBy3 when divisibleBy3 % 3 = 0 -> Ignore
-            | _ -> Reject (string x)
+            | _ -> TernaryResult.Error (string x)
         inspectNode = id
         inspectLeaf = fun l ->
             leafInspectionCount <- leafInspectionCount + 1
@@ -82,7 +85,7 @@ let ``Execution flow: example 1`` () =
         closeNode = id
         contentName = fun (_,_,c) -> string c
         exportContent = fun _ _ c ->
-            Ok (Convert.ToInt64 c)
+            TernaryResult.Ok (Convert.ToInt64 c)
         onCompletion = fun (ok, _, failed) ->
             completedExports <- ok
             incompleteExports <- failed

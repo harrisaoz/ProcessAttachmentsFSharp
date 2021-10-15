@@ -11,20 +11,24 @@ module BP = BodyParts
 
 let dfs = Conv.dfsPost tryOpenFolder tryGetSubfolders
 
-// * Important *
-// This does not handle exceptions in any way.
-// It is expected that the occurrence of any exceptions here should be
-// treated as a complete program failure and thus cause the program to abort.
-let listFoldersInNamespace (fNamespace: ImapClient -> FolderNamespace) (client: ImapClient) =
-    client
-        .GetFolder(fNamespace client)
-        .GetSubfolders(false)
+let clientDefaultPersonalNamespace =
+    fun (client: ImapClient) ->
+        client.PersonalNamespaces.Item(0)
+
+let listFoldersInNamespace (fNamespace: ImapClient -> FolderNamespace) =
+    tryGetFolderInNamespace fNamespace
+    >> Result.bind tryGetSubfolders
+
+let selectFoldersFromNamespace folderNamespace filter =
+    listFoldersInNamespace folderNamespace
+    >> Result.map (Seq.filter filter)
 
 let selectFoldersInNamespace (ns: ImapClient -> FolderNamespace) filter =
-    listFoldersInNamespace ns
-    >> Seq.filter filter
+    fun (client: ImapClient) ->
+        client.GetFolder(ns client).GetSubfolders(false)
+        |> Seq.filter filter
 
-let enumerateMessages searchQuery (folder: IMailFolder) =
+let enumerateMessages searchQuery (folder: IMailFolder): Result<IMessageSummary seq, string> =
     let messageFields =
         MessageSummaryItems.UniqueId
         ||| MessageSummaryItems.Envelope
@@ -38,8 +42,8 @@ let enumerateMessages searchQuery (folder: IMailFolder) =
     }
 
     let query = searchQuery |> Option.defaultValue SearchQuery.NotDeleted
-    tryFetch query messageFields headers folder
-    |> Result.map (fun l -> l :> IMessageSummary seq)
+    tryFetch messageFields headers query folder
+    |> Result.map (fun messageSummaries -> upcast messageSummaries)
 
 let closeFolder elevatedFolder =
     elevatedFolder |> Result.bind tryCloseFolder

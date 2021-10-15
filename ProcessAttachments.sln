@@ -23,6 +23,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FileSystem", "FileSystem\Fi
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DemoApp", "DemoApp\DemoApp.fsproj", "{5CC5E610-E239-43E8-812F-D29138B22E3E}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Combinators", "Combinators\Combinators.fsproj", "{FECA4399-A2F8-478D-A457-9EFC82DC2166}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -156,5 +158,17 @@ Global
 		{5CC5E610-E239-43E8-812F-D29138B22E3E}.Release|x64.Build.0 = Release|Any CPU
 		{5CC5E610-E239-43E8-812F-D29138B22E3E}.Release|x86.ActiveCfg = Release|Any CPU
 		{5CC5E610-E239-43E8-812F-D29138B22E3E}.Release|x86.Build.0 = Release|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Debug|x64.Build.0 = Debug|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Debug|x86.Build.0 = Debug|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Release|x64.ActiveCfg = Release|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Release|x64.Build.0 = Release|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Release|x86.ActiveCfg = Release|Any CPU
+		{FECA4399-A2F8-478D-A457-9EFC82DC2166}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

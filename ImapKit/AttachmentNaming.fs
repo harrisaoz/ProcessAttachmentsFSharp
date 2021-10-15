@@ -1,9 +1,10 @@
 ﻿module ProcessAttachments.ImapKit.AttachmentNaming
 
 open System
-open FSharp.Core.Extensions
 open MailKit
 open MimeKit
+
+open Combinators
 
 let datePart (dateFormat: string) fallbackLabel (messageDate: 'm -> DateTimeOffset option) messageId message =
     match messageDate message with
