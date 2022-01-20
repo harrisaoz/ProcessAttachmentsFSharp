@@ -198,7 +198,9 @@ let main argv =
                      attachment.FileName |> Option.ofObj)
 
                 match (ignore1 maybeFilename || ignore2 maybeContentType) with
-                | true -> Ignore
+                | true ->
+                    printfn $"~ ignore: {attachment.FileName}"
+                    Ignore
                 | false ->
                     match (CC.isContentType accept maybeContentType) with
                     | true -> TernaryResult.Ok attachment
@@ -241,6 +243,7 @@ let main argv =
         fun parameters (folder, message, attachment) ->
             let exportDir = parameters.DestinationFolder
             let localPart = Naming.name folder message attachment
+            printfn $"+ writeAttachmentToFile [localPart = {localPart}]"
             Export.fsWriteToFile Message.tryCopyAttachmentToStream (FS.absoluteName exportDir localPart) attachment
 
     let saveAttachment: RuntimeParameters -> IMailFolder -> IMessageSummary * MimePart -> TernaryResult<MimePart * int64, string> =
