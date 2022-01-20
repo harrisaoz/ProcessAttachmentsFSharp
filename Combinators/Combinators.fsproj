@@ -10,6 +10,8 @@
         <Compile Include="String.fs" />
         <Compile Include="Seq.fs" />
         <Compile Include="TernaryResult.fs" />
+        <Compile Include="Boolean.fs" />
+        <Compile Include="Pair.fs" />
     </ItemGroup>
 
     <ItemGroup>

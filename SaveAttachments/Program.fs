@@ -6,7 +6,6 @@ open MailKit.Net.Imap
 open Microsoft.Extensions.Configuration
 open MimeKit
 
-open ProcessAttachments.DomainInterface
 open ProcessAttachments.ImapKit.ImapService
 open TypedConfiguration
 open Combinators
@@ -31,128 +30,6 @@ module CC = ProcessAttachments.ImapKit.Categorise
 let personalNamespace =
     fun (client: ImapClient) ->
         client.PersonalNamespaces.Item(0)
-
-let main' argv =
-    let behaviour = {
-        defaultConfigFilename = "ProcessAttachments.json"
-
-        configuration =
-            fun config ->
-               match (TC.imapServiceParameters config,
-                      TC.mailboxParameters config,
-                      TC.exportParameters config) with
-               | Some sessionParams, Some mailboxParams, Some exportParams ->
-                   Ok (sessionParams, mailboxParams, exportParams)
-               | _ -> Error "Failed to load configuration"
-
-        initialise =
-            fun (sessionParams, mailboxParams, exportConfig) ->
-                (
-                    Service.initialize,
-                    Service.connect sessionParams,
-                    (
-                        FS.assertFolder exportConfig.DestinationFolder,
-                        mailboxParams.SourceFolders
-                    )
-                )
-
-        roots =
-            fun (_, sourceFolders) ->
-               ImF.selectFoldersInNamespace personalNamespace (
-                   fun f -> sourceFolders |> Seq.icontains f.Name
-               )
-
-        nodes = ImF.dfs
-
-        closeNode = ImF.closeFolder
-
-        leaves = ImF.enumerateMessages None
-
-        contentItems = Message.dfsPre
-
-        categorise =
-            // To do: leave all of this to run-time configuration:
-            // - accepted MIME types
-            // - ignored MIME types
-            // - ignored filenames
-            let acceptedMimeTypes =
-                seq {
-                    ContentType("application", "pdf")
-                    ContentType("application", "octet-stream")
-                }
-            let ignoredMimeTypes =
-                seq {
-                    ContentType("text", "html")
-                    ContentType("text", "plain")
-                    ContentType("image", "png")
-                    ContentType("application", "pkcs7-signature")
-                }
-
-            let ignoredFilenames _ (filename: string) =
-                filename.Contains("detalhe")
-                || filename.EndsWith(".zip")
-                || filename.Contains("NEWSLETTER")
-                || filename.Contains("FUNDO GARANTIA")
-            let ignoredContentTypes _ = CC.isContentType ignoredMimeTypes
-
-            CC.categorise ignoredFilenames ignoredContentTypes acceptedMimeTypes
-
-        contentName = fun (folder, message, attachment) -> Naming.name folder message attachment
-
-        exportContent =
-            let createStream = Export.tryCreateFile
-            let streamCopy = Message.tryCopyAttachmentToStream
-
-            fun (parent, _) name ->
-                let absName = Path.Combine(parent.FullName, FS.sanitise name)
-                FS.Export.writeContentToStream createStream streamCopy absName
-
-        onCompletion = fun (ok, noAction, failed) ->
-            let folderLabel = sprintf "[folder = %s]"
-            let messageLabel = sprintf "[subject = %s][date = %s]"
-            
-            let okFolder (f: IMailFolder) =
-                folderLabel f.FullName
-            let okMessage (m: IMessageSummary) =
-                messageLabel m.Envelope.Subject (string m.Envelope.Date)
-            let failFolder (mf: IMailFolder option) =
-                mf
-                |> Option.map (fun f -> f.FullName)
-                |> Option.defaultValue "?"
-                |> folderLabel
-            let failMessage (mm: IMessageSummary option) =
-                mm
-                |> Option.map (fun m -> (m.Envelope.Subject, string m.Envelope.Date))
-                |> Option.defaultValue ("?", "?")
-                |> (fun (s, d) -> messageLabel s d)
-
-            let inline show identifyNode identifyLeaf symbol =
-                List.iter (
-                    fun (n, l, s) ->
-                        let nText = identifyNode n
-                        let lText = identifyLeaf l
-                        eprintfn $"{string symbol} {nText} {lText} {string s}"
-                    )
-
-            show okFolder okMessage "+" ok
-            show okFolder okMessage "=" noAction
-            show failFolder failMessage "-" failed
-
-            List.length failed
-
-        inspectNode = fun node ->
-            eprintfn $"Inspecting folder: {node.FullName}"
-            node
-
-        inspectLeaf = fun leaf ->
-            eprintfn $"Inspecting message: {leaf.Envelope.Subject}"
-
-        identifyNode = fun node -> $"[folder {node.FullName}]"
-
-        identifyLeaf = fun leaf -> $"[subject {leaf.Envelope.Subject}][date {leaf.Envelope.Date}]"
-    }
-
-    argv |> ET.main behaviour
 
 type DestinationFolder = DirectoryInfo
 type SourceFolders = string seq
@@ -203,7 +80,6 @@ let rAddContext g f (p, r) = ((p, r |> (f >> g) p), r)
 let resultOnly = snd
 
 module RoseForestOfResult =
-//    let inline tbind f = (TernaryResult.bind >> RoseTree.map >> Seq.map >> Result.map) f
     let inline bind f = (Result.bind >> RoseTree.map >> Seq.map >> Result.map) f
     let inline map f = (Result.map >> RoseTree.map >> Seq.map >> Result.map) f
 
@@ -268,55 +144,6 @@ let main argv =
                     RoseTree.unfold (ls excludedFolderNames) (validate topLevelFolder)
                 )
 
-    let showTree: RuntimeParameters -> FolderResultTree -> FolderResultTree =
-        let showNode (r: Result<IMailFolder, string>) =
-            let showText =
-                match r with
-                | Ok folder -> folder.FullName
-                | Error msg -> msg
-            printfn $"showTree: ({showText})"
-            r
-
-        fun _ ->
-            printfn "== showTree =="
-            RoseTree.map showNode
-
-    let reportFailures: RuntimeParameters -> FolderResultTree seq -> int =
-        let failureCount =
-            RoseTree.dfsPost
-            >> Seq.filter (
-                fun r ->
-                    match r with
-                    | Ok (folder: IMailFolder) ->
-                        printfn $"reportFailures: Ok {folder.FullName}"
-                        false
-                    | Error msg ->
-                        printfn $"reportFailures: Error {msg}"
-                        true
-                )
-            >> Seq.length
-
-        let f (g: FolderResultTree -> 'a) (t: FolderResultTree): Result<IMailFolder * 'a, string> =
-            t.Root
-            |> Result.map (fun rootFolder -> (rootFolder, g t))
-
-        fun _ ->
-            printfn "== reportFailures =="
-            Seq.map (f failureCount)
-            >> Seq.fold (fun n r ->
-                match r with
-                | Ok (root, k) ->
-                    match (FTry.tryCloseFolder root) with
-                    | Ok folder -> printfn $"[{folder.FullName}] Closed folder"
-                    | Error msg -> printfn $"[{root.FullName}] Error closing folder: {msg}"
-                    n + k
-                | Error _ -> 0) 0
-
-    let folderNameToDirName: IMailFolder -> string =
-        fun folder ->
-            folder.FullName
-            |> (String.split [|folder.DirectorySeparator|] >> FS.asDirName)
-
     let assertProcessingFolders: RuntimeParameters -> IMailFolder -> Result<IMailFolder * ProcFolders, string> =
         fun parameters folder ->
             printfn "== assertProcessingFolders =="
@@ -361,7 +188,7 @@ let main argv =
 
     let categoriseAttachment: RuntimeParameters -> MimePart ->
         TernaryResult<MimePart, string> =
-            fun parameters (attachment) ->
+            fun parameters attachment ->
                 let ignore1 = parameters.CategorisationParameters.IgnoreBasedOnFilename
                 let ignore2 = CC.isContentType parameters.CategorisationParameters.IgnoredMimeTypes
                 let accept = parameters.CategorisationParameters.AcceptedMimeTypes
@@ -446,12 +273,6 @@ let main argv =
             fun parameters (folder, procFolders, messagesAttachmentResults) ->
                 (folder, procFolders, partial parameters folder messagesAttachmentResults)
 
-//    let moveMessage: RuntimeParameters -> IMailFolder * IMessageSummary * TernaryResult<MimePart seq * int64, string> ->
-//        TernaryResult<IMessageSummary, string> =
-//            fun parameters (folder, message, attachmentResults) ->
-//                match attachmentResults with
-//                | TernaryResult.Ok _ ->
-
     let moveFolderMessages: StepContext -> IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> ->
             Result<IMailFolder * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> * ProcCounts, string> =
         fun _ (folder, (processed, attention), messagesAttachmentsResults) ->
@@ -465,7 +286,7 @@ let main argv =
                         printfn $"== moveFolderMessages [message = {string message.NormalizedSubject}; processed; size = {string sizeInBytes}] =="
                         FTry.tryMoveMessageTo processed fromFolder message |> Result.map (fun uid -> (Some uid, None))
                     | _ ->
-                        printfn $"== moveFolderMessages [message = {string (message.NormalizedSubject)}; attention] =="
+                        printfn $"== moveFolderMessages [message = {string message.NormalizedSubject}; attention] =="
                         FTry.tryMoveMessageTo attention fromFolder message |> Result.map (fun uid -> (None, Some uid))
                     )
                 |> L.fold (fun (processedSet, attentionSet) r ->
@@ -527,16 +348,6 @@ let main argv =
                     >> TernaryResult.toResult (Ok ((0, 0), 0, 0L))
                     )
 
-    let summarizeResults: RuntimeParameters * Result<RoseTree<Result<IMailFolder * (IMessageSummary * TernaryResult<MimePart seq * int64, string>) seq, string>> seq, string> ->
-        Result<int, string> =
-            fun (parameters, resultTree) ->
-                resultTree
-                |> Result.map (
-                    Seq.map (
-                        RoseTree.dfsPre
-                        >> Seq.length)
-                    >> Seq.sum)
-
     // Report:
     // - number of messages rejected due to MIME type (or other categorisation rule)
     // - number of messages for which attachments were exported
@@ -555,10 +366,7 @@ let main argv =
         >> rNext RFoR.bind moveFolderMessages
         >> rNext (RoseTree.map >> Seq.map >> Result.map) summarizeFolderResults
         >> collectFolderSummaries
-//        >> summarizeResults
-//        >> resultOnly
-//        >> Result.bind (fun _ -> Error "not yet implemented")
-        
+
     let run =
         chooseConfigurationFile
         >> Config.fromSource

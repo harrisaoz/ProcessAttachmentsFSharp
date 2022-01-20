@@ -9,26 +9,6 @@ open MimeKit
 open ProcessAttachments.ImapKit
 open Microsoft.Extensions.Configuration
 
-let existsWhere: ('a -> 'b -> bool) -> 'b seq -> 'a option -> bool =
-    fun p xs ->
-        Option.exists (p >> Seq.exists >> (T xs))
-
-let anyMaybePredicate (ps: ('a -> bool) seq): 'a -> bool =
-    (C Seq.existsPredicate) ps
-
-let maybeExistsPredicate (m: 'a option): ('a -> bool) seq -> bool =
-    (C (C Seq.existsPredicate >> Option.exists)) m
-
-let anyPredicate (ps: ('a -> bool) seq): 'a option -> bool =
-    (C Seq.existsPredicate >> Option.exists) ps
-// equivalent to:
-//        fun ps m ->
-//            match m with
-//            | Some x -> Seq.exists (fun p -> p x) ps
-//            | None -> false
-
-let eitherForG f = S (f >> (||))
-
 let imapServiceSectionName = "ImapService"
 
 let inline getConfig name binder container =
@@ -132,16 +112,13 @@ let categorisationParameters: IConfiguration -> AttachmentCategorisationParamete
     let ignoreFilenameSection section =
         Load.section section "IgnoreFilename"
 
-    // Preferable to List.map + pattern matching, due to the need to match all possible patterns in assignment.
-    let applyToBoth f a b = (f a, f b)
-
     getConfig "Categorisation" <| fun section ->
         let acceptedMimeTypes, ignoredMimeTypes =
-            applyToBoth (readAsContentTypes section) "AcceptedMimeTypes" "IgnoredMimeTypes"
+            Pair.map (readAsContentTypes section) "AcceptedMimeTypes" "IgnoredMimeTypes"
         let ignoreContains, ignoreEndsWith =
             match ignoreFilenameSection section with
             | Some filenameSection ->
-                applyToBoth (Load.readMany filenameSection) "Contains" "EndsWith"
+                Pair.map (Load.readMany filenameSection) "Contains" "EndsWith"
             | None -> (Seq.empty, Seq.empty)
 
         if (Seq.isEmpty acceptedMimeTypes && Seq.isEmpty ignoredMimeTypes) then
@@ -153,7 +130,7 @@ let categorisationParameters: IConfiguration -> AttachmentCategorisationParamete
                 IgnoreBasedOnFilename =
                      C Seq.existsPredicate <| seq
                          {
-                             existsWhere String.contains ignoreContains
-                             existsWhere String.endsWith ignoreEndsWith
+                             Seq.maybeExistsWhere String.contains ignoreContains
+                             Seq.maybeExistsWhere String.endsWith ignoreEndsWith
                          }
             }
