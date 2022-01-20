@@ -45,6 +45,16 @@ module TernaryResult =
         | Ignore -> resultOfIgnore
         | Error msg -> Result.Error msg
 
+    let isOk tr =
+        match tr with
+        | Ok _ -> true
+        | _ -> false
+
+    let shouldIgnore tr =
+        match tr with
+        | Ignore _ -> true
+        | _ -> false
+
     let groupResult (xs: LazyList<TernaryResult<'a, 'b>>): TernaryResult<LazyList<'a>, 'b> =
         let folder acc =
             let accBind x =
