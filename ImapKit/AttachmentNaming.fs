@@ -22,7 +22,10 @@ let composeName parts =
 
 module InvoiceNaming =
     let name (folder: IMailFolder) (message: IMessageSummary) (mimePart: MimePart) =
-        let folderName (folder: IMailFolder) = folder.FullName
+        let folderName (folder: IMailFolder) =
+            folder.FullName
+            |> String.split [| folder.DirectorySeparator |]
+            |> String.join "__"
         let preferredName (part: MimePart) = part.FileName |> Option.ofObj
         let fallbackName (part: MimePart) =
             part.ContentMd5 |> Option.ofObj |> Option.defaultValue (part.ComputeContentMd5())
