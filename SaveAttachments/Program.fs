@@ -1,5 +1,6 @@
 open System
 open System.IO
+open System.Net.Mime
 open FSharpx.Collections.Experimental
 open MailKit
 open MailKit.Net.Imap
@@ -110,13 +111,13 @@ let main argv =
 
     let openSessionFromParameters: RuntimeParameters -> Result<OpenImapSession, string> =
         fun rtArgs ->
-            printfn "openSessionFromParameters"
+            printfn "== [openSessionFromParameters] =="
             let client = Service.initialize
             Service.openSessionViaClient rtArgs.SessionParameters client
 
     let rootFoldersViaSession: RuntimeParameters -> OpenImapSession -> Result<IMailFolder seq, string> =
         fun parameters session ->
-            printfn "rootFoldersViaSession"
+            printfn "== [rootFoldersViaSession] =="
             let folderFilter (folder: IMailFolder) =
                 parameters.ExtraParameters.SourceFolders |> Seq.icontains folder.Name
             ImF.selectFoldersFromNamespace ImF.clientDefaultPersonalNamespace folderFilter session.Client
@@ -134,7 +135,7 @@ let main argv =
             | Result.Error msg -> (Result.Error msg, L.ofList [Result.Error msg])
 
         fun parameters roots ->
-            printfn $"== fetchFolderForest [roots = {Seq.length roots}] =="
+            printfn $"== [fetchFolderForest] [root count = {Seq.length roots}] =="
             let excludedFolderNames = seq {
                 parameters.ExtraParameters.ProcessedSubfolder
                 parameters.ExtraParameters.AttentionSubfolder
@@ -146,7 +147,6 @@ let main argv =
 
     let assertProcessingFolders: RuntimeParameters -> IMailFolder -> Result<IMailFolder * ProcFolders, string> =
         fun parameters folder ->
-            printfn "== assertProcessingFolders =="
             let processedSubfolderName = parameters.ExtraParameters.ProcessedSubfolder
             let attentionSubfolderName = parameters.ExtraParameters.AttentionSubfolder
             
@@ -155,13 +155,13 @@ let main argv =
             
             match (processedResult, attentionResult) with
             | Ok processed, Ok attention ->
-                printfn "== assertProcessingFolders [subfolders created] =="
+                printfn "\u2713 [assertProcessingFolders]"
                 Ok (folder, (processed, attention))
             | Error msg, _ ->
-                printfn "== assertProcessingFolders [processed folder not created] =="
+                printfn $"\u274c [assertProcessingFolders] {parameters.ExtraParameters.ProcessedSubfolder}"
                 Error msg
             | _, Error msg ->
-                printfn "== assertProcessingFolders [attention folder not created] =="
+                printfn $"\u274c [assertProcessingFolders] {parameters.ExtraParameters.AttentionSubfolder} "
                 Error msg
 
     let enumerateFolderMessages: StepContext -> IMailFolder * ProcFolders -> IMailFolder * ProcFolders * LazyList<IMessageSummary> =
@@ -170,17 +170,17 @@ let main argv =
                 match ImF.enumerateMessages None folder with
                 | Ok m -> m
                 | Error _ -> Seq.empty
-            printfn $"== enumerateFolderMessages [message count: {Seq.length messages}] =="
+            printfn $"? [enumerateFolderMessages] message count = {Seq.length messages}"
             (folder, processingFolders, L.ofSeq messages)
 
     let enumerateMessageAttachments: StepContext -> IMailFolder * ProcFolders * LazyList<IMessageSummary> -> IMailFolder * ProcFolders * MessagesWithAttachments =
         fun _ (folder, procFolders, messages) ->
-            printfn $"== enumerateMessageAttachments [message count = {Seq.length messages}] =="
+            printfn $"? [enumerateMessageAttachments] message count = {Seq.length messages}"
             messages
             |> L.map (
                 fun message ->
                     let attachments = Message.dfsPre folder message
-                    printfn $"== enumerateMessageAttachments [attachment count = {Seq.length attachments}] =="
+                    printfn $"? [enumerateMessageAttachments] attachment count = {Seq.length attachments}"
                     (message, L.ofSeq attachments)
                 )
             |> (fun messagesWithAttachments ->
@@ -192,19 +192,36 @@ let main argv =
                 let ignore1 = parameters.CategorisationParameters.IgnoreBasedOnFilename
                 let ignore2 = CC.isContentType parameters.CategorisationParameters.IgnoredMimeTypes
                 let accept = parameters.CategorisationParameters.AcceptedMimeTypes
+                
+                let contentTypeConverter: ContentType -> string option -> ContentType =
+                    fun mimeType fileExtension ->
+                        match (mimeType.MediaType, mimeType.MediaSubtype, fileExtension) with
+                        | "text", "html", Some ".pdf" -> ContentType("application", "pdf")
+                        | "text", "html", Some ".csv" -> ContentType("text", "comma-separated-values")
+                        | "application", "octet-stream", Some ".csv" -> ContentType("text", "comma-separated-values")
+                        | _ -> mimeType
 
+                let fileExtension = Path.GetExtension(attachment.FileName) |> Option.ofObj
                 let maybeContentType, maybeFilename =
-                    (attachment.ContentType |> Option.ofObj,
-                     attachment.FileName |> Option.ofObj)
+                    let ct = attachment.ContentType |> Option.ofObj
+                    let fn = attachment.FileName |> Option.ofObj
+                    
+                    match ct with
+                    | Some mimeType -> (Some (contentTypeConverter mimeType fileExtension), fn)
+                    | None -> (None, fn)
 
                 match (ignore1 maybeFilename || ignore2 maybeContentType) with
                 | true ->
-                    printfn $"~ ignore: {attachment.FileName}"
+                    printfn $"~ [categoriseAttachment] [type = {string attachment.ContentType.MimeType}] [name = {attachment.FileName}]"
                     Ignore
                 | false ->
                     match (CC.isContentType accept maybeContentType) with
-                    | true -> TernaryResult.Ok attachment
-                    | false -> TernaryResult.Error $"[{string maybeContentType} Missing or unsupported MIME type"
+                    | true ->
+                        printfn $"+ [categoriseAttachment] [Content Type = {string attachment.ContentType.MimeType}] [Filename = {string attachment.FileName}]"
+                        TernaryResult.Ok attachment
+                    | false ->
+                        printfn $"! [categoriseAttachment] [Content Type = {string attachment.ContentType.MimeType}] [Filename = {string attachment.FileName}]"
+                        TernaryResult.Error $"[{string maybeContentType} Missing or unsupported MIME type"
 
     let categoriseAttachmentResult: RuntimeParameters -> Result<MimePart, string> ->
         TernaryResult<MimePart, string> =
@@ -230,11 +247,11 @@ let main argv =
                     let categorised = categoriseMessageAttachments parameters messageAttachmentResults
                     match categorised with
                     | TernaryResult.Ok xs ->
-                        printfn $"== categoriseFolderMessageAttachments [# categorised = {Seq.length xs}] =="
+                        printfn $"+ [categoriseFolderMessageAttachments] Saving {Seq.length xs} attachments"
                     | TernaryResult.Ignore ->
-                        printfn $"== categoriseFolderMessageAttachments [attachments ignored] =="
+                        printfn $"~ [categoriseFolderMessageAttachments] Message ignored"
                     | TernaryResult.Error msg ->
-                        printfn $"== categoriseFolderMessageAttachments [error: {msg}] =="
+                        printfn $"! [categoriseFolderMessageAttachments] {msg}"
 
                     (message, categorised))
                 >> fun xs -> (folder, procFolders, xs))
@@ -243,7 +260,7 @@ let main argv =
         fun parameters (folder, message, attachment) ->
             let exportDir = parameters.DestinationFolder
             let localPart = Naming.name folder message attachment
-            printfn $"+ writeAttachmentToFile [localPart = {localPart}]"
+            printfn $"+ [writeAttachmentToFile] {localPart}"
             Export.fsWriteToFile Message.tryCopyAttachmentToStream (FS.absoluteName exportDir localPart) attachment
 
     let saveAttachment: RuntimeParameters -> IMailFolder -> IMessageSummary * MimePart -> TernaryResult<MimePart * int64, string> =
@@ -279,17 +296,16 @@ let main argv =
     let moveFolderMessages: StepContext -> IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> ->
             Result<IMailFolder * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> * ProcCounts, string> =
         fun _ (folder, (processed, attention), messagesAttachmentsResults) ->
-            printfn $"== moveFolderMessages [folder = {folder.FullName}] =="
             FTry.tryOpenFolderWritable folder
             |> Result.map (fun fromFolder ->
                 messagesAttachmentsResults
                 |> L.map (fun (message, attachmentResult) ->
                     match attachmentResult with
                     | TernaryResult.Ok (_, sizeInBytes) ->
-                        printfn $"== moveFolderMessages [message = {string message.NormalizedSubject}; processed; size = {string sizeInBytes}] =="
+                        printfn $">> [moveFolderMessages][{string sizeInBytes} bytes] {string message.NormalizedSubject}"
                         FTry.tryMoveMessageTo processed fromFolder message |> Result.map (fun uid -> (Some uid, None))
                     | _ ->
-                        printfn $"== moveFolderMessages [message = {string message.NormalizedSubject}; attention] =="
+                        printfn $">! [moveFolderMessages] {string message.NormalizedSubject}"
                         FTry.tryMoveMessageTo attention fromFolder message |> Result.map (fun uid -> (None, Some uid))
                     )
                 |> L.fold (fun (processedSet, attentionSet) r ->
@@ -305,12 +321,11 @@ let main argv =
         Result<IMailFolder * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> * ProcCounts, string> ->
             TernaryResult<ProcCounts * int * int64, string> =
         let logSummary (folder: IMailFolder) (result: TernaryResult<ProcCounts * int * int64, string>) =
-            printfn $"== summarizeFolderResults [folder = {folder.FullName}; result = {string result}] =="
+            printfn $"| [summarizeFolderResults][{string result}] {folder.FullName}"
             result
 
         let partial (_: RuntimeParameters): IMailFolder * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> * ProcCounts -> TernaryResult<ProcCounts * int * int64, string> =
             fun (folder, messagesExportResults, procCounts) ->
-                printfn $"== summarizeFolderResults [folder = {folder.FullName}] =="
                 messagesExportResults
                 |> L.map (fun (_, tr) ->
                     tr |> TernaryResult.map (fun (attachmentsSaved, totalSize) ->
