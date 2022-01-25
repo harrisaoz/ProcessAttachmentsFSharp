@@ -64,7 +64,7 @@ let ``Mailbox configuration should be loaded from the specified configuration fi
                 Assert.Contains("AmonitoredFolder", materialized)
                 Assert.Contains("AnotherFolder", materialized)
             )
-        Assert.False(maybeMailboxParams.IsNone, $"Configuration parameters should not be empty [{maybeMailboxParams}]")
+//        Assert.False(maybeMailboxParams.IsNone, $"Configuration parameters should not be empty [{maybeMailboxParams}]")
     | Result.Error msg -> Assert.True(false, msg)
 
 [<Fact>]
@@ -79,3 +79,34 @@ let ``Attachment Storage configuration should be loaded from the specified confi
             )
         Assert.False(maybeExportParams.IsNone, $"Configuration parameters should not be empty [{maybeExportParams}]")
     | Result.Error msg -> Assert.True(false, msg)
+
+let ignoreIfContainsAnyOfThese = seq { "blue"; "red" }
+let ignoreIfEndsInAnyOfThese = seq { "end"; "excluded" }
+let ignoreBasedOnFilename =
+    TypedConfiguration.ignoreBasedOnFilename ignoreIfContainsAnyOfThese ignoreIfEndsInAnyOfThese
+
+[<Fact>]
+let ``IgnoreBasedOnFilename: Not Matched cases`` () =
+    seq {
+        Some "endstart"
+        Some "excludedornot"
+        Some "green"
+        None
+    }
+    |> Seq.map ignoreBasedOnFilename
+    |> Seq.iter Assert.False
+
+[<Fact>]
+let ``IgnoreBasedOnFilename: Matched cases`` () =
+    seq {
+        "somebluestuff"
+        "send"
+        "bored"
+        "End"
+        "BookEnd"
+        "Blue"
+        "LightBlue"
+        "darkREDspot"
+    }
+    |> Seq.map (Some >> ignoreBasedOnFilename)
+    |> Seq.iter Assert.True
