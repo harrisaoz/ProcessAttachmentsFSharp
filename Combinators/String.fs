@@ -3,8 +3,15 @@
 let contains: string -> string -> bool =
     fun haystack -> haystack.Contains
 
+let containsCI: string -> string -> bool =
+    fun haystack needle ->
+        haystack.ToLower().Contains(needle.ToLower())
+
 let endsWith: string -> string -> bool =
     fun haystack -> haystack.EndsWith
+
+let endsWithCI: string -> string -> bool =
+    fun haystack needle -> haystack.ToLower().EndsWith(needle.ToLower())
 
 let join (glue: string) (parts: string[]) =
     System.String.Join(glue, parts)

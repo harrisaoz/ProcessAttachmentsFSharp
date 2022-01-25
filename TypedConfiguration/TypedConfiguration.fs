@@ -88,6 +88,13 @@ type AttachmentCategorisationParameters =
         IgnoreBasedOnFilename: string option -> bool
     }
 
+let ignoreBasedOnFilename anywheres endings =
+    C Seq.existsPredicate <| seq
+        {
+            Seq.maybeExistsWhere String.containsCI anywheres
+            Seq.maybeExistsWhere String.endsWithCI endings
+        }
+
 let categorisationParameters: IConfiguration -> AttachmentCategorisationParameters option =
     let contentTypeFromString (fullName: string) =
         match fullName.Split("/") with
@@ -127,10 +134,5 @@ let categorisationParameters: IConfiguration -> AttachmentCategorisationParamete
             Some {
                 AcceptedMimeTypes = acceptedMimeTypes
                 IgnoredMimeTypes = ignoredMimeTypes
-                IgnoreBasedOnFilename =
-                     C Seq.existsPredicate <| seq
-                         {
-                             Seq.maybeExistsWhere String.contains ignoreContains
-                             Seq.maybeExistsWhere String.endsWith ignoreEndsWith
-                         }
+                IgnoreBasedOnFilename = ignoreBasedOnFilename ignoreContains ignoreEndsWith
             }
