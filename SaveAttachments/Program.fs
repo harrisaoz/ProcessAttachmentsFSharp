@@ -1,6 +1,5 @@
 open System
 open System.IO
-open System.Net.Mime
 open FSharpx.Collections.Experimental
 open MailKit
 open MailKit.Net.Imap
@@ -58,16 +57,10 @@ type ProcCounts = int * int
 
 type MessagesWithAttachments = LazyList<IMessageSummary * LazyList<Result<MimePart, string>>>
 
-let inline (>?>) x f = x >> (Result.bind f)
-
 type ExecutionContext =
     | ExecutionContext of programArgs: string[] * defaultConfigurationFilename: string
 
 type FolderResultTree = RoseTree<Result<IMailFolder, string>>
-
-type AttachmentStructure = IMailFolder * Result<IMessageSummary, string>
-
-type StepContext = RuntimeParameters
 
 let chooseConfigurationFile (ExecutionContext (args, defaultFilename)) =
     match (List.ofArray args) with
@@ -164,7 +157,7 @@ let main argv =
                 printfn $"\u274c [assertProcessingFolders] {parameters.ExtraParameters.AttentionSubfolder} "
                 Error msg
 
-    let enumerateFolderMessages: StepContext -> IMailFolder * ProcFolders -> IMailFolder * ProcFolders * LazyList<IMessageSummary> =
+    let enumerateFolderMessages: RuntimeParameters -> IMailFolder * ProcFolders -> IMailFolder * ProcFolders * LazyList<IMessageSummary> =
         fun _ (folder, processingFolders) ->
             let messages = 
                 match ImF.enumerateMessages None folder with
@@ -173,7 +166,7 @@ let main argv =
             printfn $"? [enumerateFolderMessages] message count = {Seq.length messages}"
             (folder, processingFolders, L.ofSeq messages)
 
-    let enumerateMessageAttachments: StepContext -> IMailFolder * ProcFolders * LazyList<IMessageSummary> -> IMailFolder * ProcFolders * MessagesWithAttachments =
+    let enumerateMessageAttachments: RuntimeParameters -> IMailFolder * ProcFolders * LazyList<IMessageSummary> -> IMailFolder * ProcFolders * MessagesWithAttachments =
         fun _ (folder, procFolders, messages) ->
             printfn $"? [enumerateMessageAttachments] message count = {Seq.length messages}"
             messages
@@ -236,8 +229,8 @@ let main argv =
             L.map (categoriseAttachmentResult parameters)
             >> TernaryResult.groupResult
 
-    let categoriseFolderMessageAttachments:
-        StepContext -> IMailFolder * ProcFolders * MessagesWithAttachments ->
+    let categoriseFolderMessageAttachments: RuntimeParameters ->
+            IMailFolder * ProcFolders * MessagesWithAttachments ->
             IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart>, string>> =
 
         fun parameters (folder, procFolders, messagesAttachmentResults) ->
@@ -282,7 +275,7 @@ let main argv =
             fun parameters folder message attachmentInstructions ->
                 (message, partial parameters folder message attachmentInstructions)
 
-    let saveFolderAttachments: StepContext -> IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart>, string>> ->
+    let saveFolderAttachments: RuntimeParameters -> IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart>, string>> ->
         IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> =
             let partial parameters folder =
                 L.map (
@@ -293,7 +286,7 @@ let main argv =
             fun parameters (folder, procFolders, messagesAttachmentResults) ->
                 (folder, procFolders, partial parameters folder messagesAttachmentResults)
 
-    let moveFolderMessages: StepContext -> IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> ->
+    let moveFolderMessages: RuntimeParameters -> IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> ->
             Result<IMailFolder * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> * ProcCounts, string> =
         fun _ (folder, (processed, attention), messagesAttachmentsResults) ->
             FTry.tryOpenFolderWritable folder
@@ -317,7 +310,7 @@ let main argv =
                     (fromFolder, messagesAttachmentsResults, (Set.count processedSet, Set.count attentionSet)))
             )
 
-    let summarizeFolderResults: StepContext ->
+    let summarizeFolderResults: RuntimeParameters ->
         Result<IMailFolder * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> * ProcCounts, string> ->
             TernaryResult<ProcCounts * int * int64, string> =
         let logSummary (folder: IMailFolder) (result: TernaryResult<ProcCounts * int * int64, string>) =
@@ -344,7 +337,7 @@ let main argv =
             TernaryResult.ofResult
             >> TernaryResult.bind (partial parameters)
 
-    let collectFolderSummaries: StepContext * Result<RoseTree<TernaryResult<ProcCounts * int * int64, string>> seq, string> ->
+    let collectFolderSummaries: RuntimeParameters * Result<RoseTree<TernaryResult<ProcCounts * int * int64, string>> seq, string> ->
         Result<ProcCounts * int * int64, string> =
             let countGroup: TernaryResult<ProcCounts * int * int64, string> seq -> TernaryResult<ProcCounts * int * int64, string> =
                 printfn "== countGroup =="
