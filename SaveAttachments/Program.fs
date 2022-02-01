@@ -153,7 +153,7 @@ let main argv =
                 parameters.Attention
             }))
 
-        filter >> FTry.tryGetSubfoldersWhere >> (RTG.grow FTry.tryOpenFolder) >> Seq.map
+        Seq.map << (RTG.grow FTry.tryOpenFolder) << FTry.tryGetSubfoldersWhere << filter
 
     let assertProcessingFolders: Log -> PostProcessingFolders -> IMailFolder -> Result<IMailFolder * ProcFolders, string> =
         fun inform parameters folder ->
@@ -397,7 +397,7 @@ let main argv =
         |> RFoR.map (categoriseFolderMessageAttachments inform parameters.CategorisationParameters)
         |> RFoR.map (saveFolderAttachments parameters.DestinationFolder)
         |> RFoR.bind moveFolderMessages
-        |> (RoseTree.map >> Seq.map >> Result.map) (TernaryResult.ofResult >> (TernaryResult.bind (summarizeFolderResults report)))
+        |> (Result.map << Seq.map << RoseTree.map) (TernaryResult.ofResult >> (TernaryResult.bind (summarizeFolderResults report)))
         |> collectFolderSummaries
 
     let run =
