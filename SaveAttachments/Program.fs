@@ -67,6 +67,8 @@ type LoggingParameters =
     {
         LogDir: AbsoluteFilename
         Info: RelativeFilename
+        Errors: RelativeFilename
+        Trace: RelativeFilename option
     }
 
 type RuntimeParameters = GenericRuntimeParameters<ExtraParameters, LoggingParameters>
@@ -128,20 +130,22 @@ let main argv =
                     {
                         LogDir = AbsoluteFilename logging.LogDir
                         Info = RelativeFilename logging.InfoFilename
+                        Errors = RelativeFilename logging.ErrorFilename
+                        Trace = Option.map RelativeFilename logging.TraceFilename
                     }
                 }
             parameters |> Result.Ok
         | _ -> Result.Error "Failed to infer valid runtime parameters from the provided configuration"
 
-    let openSessionFromParameters: SessionParameters -> Result<OpenImapSession, string> =
-        fun sessionParams ->
-            printfn "== [openSessionFromParameters] =="
+    let openSessionFromParameters: Log -> SessionParameters -> Result<OpenImapSession, string> =
+        fun trace sessionParams ->
+            trace "== [openSessionFromParameters] =="
             let client = Service.initialize
             Service.openSessionViaClient sessionParams client
 
-    let rootFoldersViaSession: SourceFolders -> OpenImapSession -> Result<IMailFolder seq, string> =
-        fun sourceFolders session ->
-            printfn "== [rootFoldersViaSession] =="
+    let rootFoldersViaSession: Log -> SourceFolders -> OpenImapSession -> Result<IMailFolder seq, string> =
+        fun trace sourceFolders session ->
+            trace "== [rootFoldersViaSession] =="
             let folderFilter (folder: IMailFolder) =
                 sourceFolders |> Seq.icontains folder.Name
             ImF.selectFoldersFromNamespace ImF.clientDefaultPersonalNamespace folderFilter session.Client
@@ -196,9 +200,9 @@ let main argv =
             |> (fun messagesWithAttachments ->
                 (folder, procFolders, messagesWithAttachments))
 
-    let categoriseAttachment: Log -> AttachmentCategorisationParameters -> MimePart ->
+    let categoriseAttachment: Log * Log -> AttachmentCategorisationParameters -> MimePart ->
         TernaryResult<MimePart, string> =
-            fun inform parameters attachment ->
+            fun (inform, logError) parameters attachment ->
                 let ignore1 = parameters.IgnoreBasedOnFilename
                 let ignore2 = CC.isContentType parameters.IgnoredMimeTypes
                 let accept = parameters.AcceptedMimeTypes
@@ -230,87 +234,87 @@ let main argv =
                         inform $"+  [categoriseAttachment] [Content Type = {string attachment.ContentType.MimeType}] [Filename = {string attachment.FileName}]"
                         TernaryResult.Ok attachment
                     | false ->
-                        printfn $"!\u274c [categoriseAttachment] [Content Type = {string attachment.ContentType.MimeType}] [Filename = {string attachment.FileName}]"
+                        logError $"!\u274c [categoriseAttachment] [Content Type = {string attachment.ContentType.MimeType}] [Filename = {string attachment.FileName}]"
                         TernaryResult.Error $"[{string maybeContentType} Missing or unsupported MIME type"
 
-    let categoriseMessageAttachments: Log -> AttachmentCategorisationParameters -> LazyList<Result<MimePart, string>> ->
+    let categoriseMessageAttachments: Log * Log -> AttachmentCategorisationParameters -> LazyList<Result<MimePart, string>> ->
             TernaryResult<LazyList<MimePart>, string> =
-        fun inform parameters ->
+        fun log parameters ->
             L.map (
                 TernaryResult.ofResult
-                >> TernaryResult.bind (categoriseAttachment inform parameters))
+                >> TernaryResult.bind (categoriseAttachment log parameters))
             >> TernaryResult.groupResult
 
-    let categoriseFolderMessageAttachments: Log -> AttachmentCategorisationParameters ->
+    let categoriseFolderMessageAttachments: Log * Log -> AttachmentCategorisationParameters ->
             IMailFolder * ProcFolders * MessagesWithAttachments ->
             IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart>, string>> =
 
-        fun inform parameters (folder, procFolders, messagesAttachmentResults) ->
+        fun (inform, logError) parameters (folder, procFolders, messagesAttachmentResults) ->
             messagesAttachmentResults
             |> (
                 L.map (fun (message, messageAttachmentResults) ->
-                    let categorised = categoriseMessageAttachments inform parameters messageAttachmentResults
+                    let categorised = categoriseMessageAttachments (inform, logError) parameters messageAttachmentResults
                     match categorised with
                     | TernaryResult.Ok xs ->
                         inform $"+  [categoriseFolderMessageAttachments] Saving {Seq.length xs} attachments"
                     | TernaryResult.Ignore ->
                         inform "~  [categoriseFolderMessageAttachments] Message ignored"
                     | TernaryResult.Error msg ->
-                        printfn $"!\u274c  [categoriseFolderMessageAttachments] {msg}"
+                        logError $"!\u274c  [categoriseFolderMessageAttachments] {msg}"
 
                     (message, categorised))
                 >> fun xs -> (folder, procFolders, xs))
 
-    let writeAttachmentToFile: DestinationFolder -> IMailFolder * IMessageSummary * MimePart -> TernaryResult<int64, string> =
-        fun destinationFolder (folder, message, attachment) ->
+    let writeAttachmentToFile: Log -> DestinationFolder -> IMailFolder * IMessageSummary * MimePart -> TernaryResult<int64, string> =
+        fun report destinationFolder (folder, message, attachment) ->
             let exportDir = destinationFolder
             let localPart = Naming.name folder message attachment
-            printfn $"+  [writeAttachmentToFile] {localPart}"
+            report $"+  [writeAttachmentToFile] {localPart}"
             FS.fsWriteToFile Message.tryCopyAttachmentToStream (FS.absoluteName exportDir localPart) attachment
 
-    let saveAttachment: DestinationFolder -> IMailFolder -> IMessageSummary * MimePart -> TernaryResult<MimePart * int64, string> =
-        fun toFolder folder ->
+    let saveAttachment: Log -> DestinationFolder -> IMailFolder -> IMessageSummary * MimePart -> TernaryResult<MimePart * int64, string> =
+        fun report toFolder folder ->
             fun (message, attachment) ->
-                writeAttachmentToFile toFolder (folder, message, attachment)
+                writeAttachmentToFile report toFolder (folder, message, attachment)
                 |> TernaryResult.map (fun countOfBytesWritten -> (attachment, countOfBytesWritten))
 
-    let saveMessageAttachments: DestinationFolder -> IMailFolder -> IMessageSummary -> TernaryResult<LazyList<MimePart>, string> ->
+    let saveMessageAttachments: Log -> DestinationFolder -> IMailFolder -> IMessageSummary -> TernaryResult<LazyList<MimePart>, string> ->
         IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string> =
-            let partial toFolder folder message =
+            let partial report toFolder folder message =
                 TernaryResult.bind (
                     L.map (fun attachment ->
-                        saveAttachment toFolder folder (message, attachment))
+                        saveAttachment report toFolder folder (message, attachment))
                     >> TernaryResult.groupResult)
                 >> TernaryResult.map (Seq.fold (fun (parts, total) (part, size) ->
                     (L.append parts (Seq.singleton part |> L.ofSeq), total + size)) (L.empty, 0L))
                 
-            fun saveToFolder folder message attachmentInstructions ->
-                (message, partial saveToFolder folder message attachmentInstructions)
+            fun report saveToFolder folder message attachmentInstructions ->
+                (message, partial report saveToFolder folder message attachmentInstructions)
 
-    let saveFolderAttachments: DestinationFolder -> IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart>, string>> ->
+    let saveFolderAttachments: Log -> DestinationFolder -> IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart>, string>> ->
         IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> =
-            let partial saveToFolder folder =
+            let partial report saveToFolder folder =
                 L.map (
                     fun (message, messageAttachmentInstructions) ->
-                        saveMessageAttachments saveToFolder folder message messageAttachmentInstructions
+                        saveMessageAttachments report saveToFolder folder message messageAttachmentInstructions
                     )
 
-            fun saveToFolder (folder, procFolders, messagesAttachmentResults) ->
-                (folder, procFolders, partial saveToFolder folder messagesAttachmentResults)
+            fun report saveToFolder (folder, procFolders, messagesAttachmentResults) ->
+                (folder, procFolders, partial report saveToFolder folder messagesAttachmentResults)
 
-    let moveFolderMessages: IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> ->
+    let moveFolderMessages: Log -> IMailFolder * ProcFolders * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> ->
             Result<IMailFolder * LazyList<IMessageSummary * TernaryResult<LazyList<MimePart> * int64, string>> * ProcCounts, string> =
-        fun (folder, (processed, attention), messagesAttachmentsResults) ->
+        fun report (folder, (processed, attention), messagesAttachmentsResults) ->
             FTry.tryOpenFolderWritable folder
             |> Result.map (fun fromFolder ->
                 messagesAttachmentsResults
                 |> L.map (fun (message, attachmentResult) ->
                     match attachmentResult with
                     | TernaryResult.Ok (_, sizeInBytes) ->
-                        printfn $">> [moveFolderMessages][{string sizeInBytes} bytes] {string message.NormalizedSubject}"
+                        report $">> [moveFolderMessages][{string sizeInBytes} bytes] {string message.NormalizedSubject}"
                         FTry.tryMoveMessageTo processed fromFolder message |> Result.map (fun uid -> (Some uid, None))
                     | _ ->
-                        printfn $">\u274c [moveFolderMessages] {string message.NormalizedSubject}"
+                        report $">\u274c [moveFolderMessages] {string message.NormalizedSubject}"
                         FTry.tryMoveMessageTo attention fromFolder message |> Result.map (fun uid -> (None, Some uid))
                     )
                 |> L.fold (fun (processedSet, attentionSet) r ->
@@ -343,10 +347,10 @@ let main argv =
                 )
             |> logSummary report folder
 
-    let collectFolderSummaries: Result<RoseTree<TernaryResult<ProcCounts * int * int64, string>> seq, string> ->
+    let collectFolderSummaries: Log -> Result<RoseTree<TernaryResult<ProcCounts * int * int64, string>> seq, string> ->
         Result<ProcCounts * int * int64, string> =
-            let countGroup: TernaryResult<ProcCounts * int * int64, string> seq -> TernaryResult<ProcCounts * int * int64, string> =
-                printfn "== countGroup =="
+            let countGroup trace: TernaryResult<ProcCounts * int * int64, string> seq -> TernaryResult<ProcCounts * int * int64, string> =
+                trace "== countGroup =="
                 L.ofSeq
                 >> TernaryResult.groupResult
                 >> TernaryResult.map (
@@ -356,12 +360,12 @@ let main argv =
                         ) ((0, 0), 0, 0L)
                     )
 
-            fun forestResult ->
-                printfn $"== collectFolderSummaries =="
+            fun trace forestResult ->
+                trace "== collectFolderSummaries =="
                 forestResult
                 |> Result.bind (
-                    Seq.map (RoseTree.dfsPre >> countGroup)
-                    >> countGroup
+                    Seq.map (RoseTree.dfsPre >> (countGroup trace))
+                    >> (countGroup trace)
                     >> TernaryResult.toResult (Ok ((0, 0), 0, 0L))
                     )
 
@@ -382,18 +386,24 @@ let main argv =
     // - total number of attachments not exported because they had already been exported
     let prog0 (parameters: RuntimeParameters) =
         let inform = log parameters.LoggingDestinations.LogDir parameters.LoggingDestinations.Info
+        let logError = log parameters.LoggingDestinations.LogDir parameters.LoggingDestinations.Errors
+        let trace =
+            match parameters.LoggingDestinations.Trace with
+            | Some traceFilename -> log parameters.LoggingDestinations.LogDir traceFilename
+            | None -> fun _ -> ()
         let report (msg: string) = printfn $"{msg}"
-        openSessionFromParameters parameters.SessionParameters
-        |> Result.bind (rootFoldersViaSession parameters.ExtraParameters.SourceFolders)
+
+        openSessionFromParameters trace parameters.SessionParameters
+        |> Result.bind (rootFoldersViaSession trace parameters.ExtraParameters.SourceFolders)
         |> Result.map (fetchFolderForest parameters.PostProcessingFolders)
         |> RFoR.bind (assertProcessingFolders inform parameters.PostProcessingFolders)
         |> RFoR.map (enumerateFolderMessages inform)
         |> RFoR.map (enumerateMessageAttachments inform)
-        |> RFoR.map (categoriseFolderMessageAttachments inform parameters.CategorisationParameters)
-        |> RFoR.map (saveFolderAttachments parameters.DestinationFolder)
-        |> RFoR.bind moveFolderMessages
+        |> RFoR.map (categoriseFolderMessageAttachments (inform, logError) parameters.CategorisationParameters)
+        |> RFoR.map (saveFolderAttachments report parameters.DestinationFolder)
+        |> RFoR.bind (moveFolderMessages report)
         |> (Result.map << Seq.map << RoseTree.map) (TernaryResult.ofResult >> (TernaryResult.bind (summarizeFolderResults report)))
-        |> collectFolderSummaries
+        |> (collectFolderSummaries trace)
 
     let run =
         chooseConfigurationFile

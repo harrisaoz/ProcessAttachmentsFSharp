@@ -72,15 +72,24 @@ type LoggingParameters =
     {
         LogDir: string
         InfoFilename: string
+        ErrorFilename: string
+        TraceFilename: string option
     }
 
 let loggingParameters: IConfiguration -> LoggingParameters option =
     getConfig "Logging" <| fun exportSection ->
-        match (Load.read exportSection "LogDir", Load.read exportSection "InfoFilename") with
-        | Some logDir, Some infoFilename ->
+        match (
+            Load.read exportSection "LogDir",
+            Load.read exportSection "InfoFilename",
+            Load.read exportSection "ErrorFilename",
+            Load.read exportSection "TraceFilename"
+            ) with
+        | Some logDir, Some infoFilename, Some errorFilename, maybeTraceFilename ->
             Some {
                 LogDir = logDir
                 InfoFilename = infoFilename
+                ErrorFilename = errorFilename
+                TraceFilename = maybeTraceFilename
             }
         | _ -> None
 
