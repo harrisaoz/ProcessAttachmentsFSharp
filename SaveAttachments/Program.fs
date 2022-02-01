@@ -154,8 +154,6 @@ let main argv =
             }))
 
         filter >> FTry.tryGetSubfoldersWhere >> (RTG.grow FTry.tryOpenFolder) >> Seq.map
-//        fun parameters ->
-//            Seq.map (RTG.grow FTry.tryOpenFolder (FTry.tryGetSubfoldersWhere (filter parameters)))
 
     let assertProcessingFolders: Log -> PostProcessingFolders -> IMailFolder -> Result<IMailFolder * ProcFolders, string> =
         fun inform parameters folder ->
