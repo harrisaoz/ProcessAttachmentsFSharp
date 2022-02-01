@@ -233,17 +233,12 @@ let main argv =
                         printfn $"!\u274c [categoriseAttachment] [Content Type = {string attachment.ContentType.MimeType}] [Filename = {string attachment.FileName}]"
                         TernaryResult.Error $"[{string maybeContentType} Missing or unsupported MIME type"
 
-    let categoriseAttachmentResult: Log -> AttachmentCategorisationParameters -> Result<MimePart, string> ->
-        TernaryResult<MimePart, string> =
-            fun inform parameters attachmentResult ->
-                match attachmentResult with
-                | Ok attachment -> categoriseAttachment inform parameters attachment
-                | Error msg -> TernaryResult.Error msg
-
     let categoriseMessageAttachments: Log -> AttachmentCategorisationParameters -> LazyList<Result<MimePart, string>> ->
             TernaryResult<LazyList<MimePart>, string> =
         fun inform parameters ->
-            L.map (categoriseAttachmentResult inform parameters)
+            L.map (
+                TernaryResult.ofResult
+                >> TernaryResult.bind (categoriseAttachment inform parameters))
             >> TernaryResult.groupResult
 
     let categoriseFolderMessageAttachments: Log -> AttachmentCategorisationParameters ->
