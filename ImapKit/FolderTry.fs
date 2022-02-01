@@ -5,6 +5,8 @@ open MailKit
 open MailKit.Net.Imap
 open MimeKit
 
+module RTG = Collections.RoseTreeGermination.ResultBoxed
+
 let inline tryWithAsResult (expression: unit -> 'a) =
     try
         expression() |> Ok
@@ -72,6 +74,9 @@ let tryGetSubfolders (folder: IMailFolder): Result<IMailFolder seq, string> =
 
 let tryGetSubfoldersWhere filter =
     tryGetSubfolders >> (Result.map (Seq.where filter))
+
+let getChildrenFiltered (filter: IMailFolder -> bool) =
+    RTG.listChildrenWithParent tryOpenFolder (tryGetSubfoldersWhere filter)
 
 let tryMoveMessageTo (toFolder: IMailFolder) (fromFolder: IMailFolder) (message: IMessageSummary): Result<UniqueId, string> =
     try

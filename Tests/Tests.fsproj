@@ -11,6 +11,7 @@
     <Compile Include="Collections.fs" />
     <Compile Include="Configuration.fs" />
     <Compile Include="Execution.fs" />
+    <Compile Include="RoseTreeGerminationSpec.fs" />
     <Compile Include="TernaryResultSpec.fs" />
     <Compile Include="Tree.fs" />
     <Compile Include="TypedConfiguration.fs" />

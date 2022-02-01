@@ -13,6 +13,7 @@ open Microsoft.FSharp.Core
 
 open FSharpx.Collections
 module TR = TernaryResult
+module RTG = Collections.RoseTreeGermination.ResultBoxed
 module L = LazyList
 module Config = Configuration.Load
 module TC = TypedConfiguration
@@ -56,6 +57,8 @@ type ProcFolders = IMailFolder * IMailFolder
 type ProcCounts = int * int
 
 type MessagesWithAttachments = LazyList<IMessageSummary * LazyList<Result<MimePart, string>>>
+
+type FolderName = string
 
 type ExecutionContext =
     | ExecutionContext of programArgs: string[] * defaultConfigurationFilename: string
@@ -116,27 +119,15 @@ let main argv =
             ImF.selectFoldersFromNamespace ImF.clientDefaultPersonalNamespace folderFilter session.Client
 
     let fetchFolderForest: RuntimeParameters -> IMailFolder seq -> FolderResultTree seq =
-        let validate = FTry.tryOpenFolder
-        let ls excludedFolderNames r =
-            let filter (folder: IMailFolder) = not (Seq.contains folder.Name excludedFolderNames)
-
-            match r with
-            | Result.Ok folder ->
-                match (FTry.tryGetSubfoldersWhere filter folder) with
-                | Result.Ok children -> (Result.Ok folder, L.ofSeq children |> L.map validate)
-                | Result.Error msg -> (Result.Ok folder, L.ofList [Result.Error msg])
-            | Result.Error msg -> (Result.Error msg, L.ofList [Result.Error msg])
-
-        fun parameters roots ->
-            printfn $"== [fetchFolderForest] [root count = {Seq.length roots}] =="
-            let excludedFolderNames = seq {
+        let filter (parameters: RuntimeParameters) (folder: IMailFolder) =
+            not (Seq.contains folder.Name (seq {
                 parameters.ExtraParameters.ProcessedSubfolder
                 parameters.ExtraParameters.AttentionSubfolder
-            }
-            roots |> Seq.map (
-                fun topLevelFolder ->
-                    RoseTree.unfold (ls excludedFolderNames) (validate topLevelFolder)
-                )
+            }))
+
+        filter >> FTry.tryGetSubfoldersWhere >> (RTG.grow FTry.tryOpenFolder) >> Seq.map
+//        fun parameters ->
+//            Seq.map (RTG.grow FTry.tryOpenFolder (FTry.tryGetSubfoldersWhere (filter parameters)))
 
     let assertProcessingFolders: RuntimeParameters -> IMailFolder -> Result<IMailFolder * ProcFolders, string> =
         fun parameters folder ->
