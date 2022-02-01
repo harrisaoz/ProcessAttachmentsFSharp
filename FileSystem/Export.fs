@@ -34,35 +34,34 @@ let absoluteName: DirectoryInfo -> string -> string =
     fun dir localName ->
         $"{dir.FullName}{Path.DirectorySeparatorChar}{localName}"
     
-module Export =
-    let tryCreateFile absoluteFilename =
-        try
-            Ok <| File.Open(absoluteFilename, FileMode.CreateNew)
-        with
-            | :? OutOfMemoryException ->
-                reraise()
-            | :? IOException ->
-                // When opening a file in CreateNew mode,
-                // IOException is only thrown if the file already exists.
-                Ignore
-            | ex ->
-                Error <| ex.Message
+let tryCreateFile absoluteFilename =
+    try
+        Ok <| File.Open(absoluteFilename, FileMode.CreateNew)
+    with
+        | :? OutOfMemoryException ->
+            reraise()
+        | :? IOException ->
+            // When opening a file in CreateNew mode,
+            // IOException is only thrown if the file already exists.
+            Ignore
+        | ex ->
+            Error <| ex.Message
 
-    let tryStreamCopy streamCopy (destination: #Stream) source =
-        try
-            streamCopy source destination
-            Ok <| destination.Length
-        with
-            | :? OutOfMemoryException ->
-                reraise()
-            | ex -> Error <| ex.Message
+let tryStreamCopy streamCopy (destination: #Stream) source =
+    try
+        streamCopy source destination
+        Ok <| destination.Length
+    with
+        | :? OutOfMemoryException ->
+            reraise()
+        | ex -> Error <| ex.Message
 
-    let writeContentToStream createStream streamCopy destStreamName source =
-        createStream destStreamName
-        |> TernaryResult.bind (
-            fun stream ->
-                use fStream = stream
-                tryStreamCopy streamCopy fStream source
-            )
+let writeContentToStream createStream streamCopy destStreamName source =
+    createStream destStreamName
+    |> TernaryResult.bind (
+        fun stream ->
+            use fStream = stream
+            tryStreamCopy streamCopy fStream source
+        )
 
-    let fsWriteToFile streamCopy = writeContentToStream tryCreateFile streamCopy
+let fsWriteToFile streamCopy = writeContentToStream tryCreateFile streamCopy

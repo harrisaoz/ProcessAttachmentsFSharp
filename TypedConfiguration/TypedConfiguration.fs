@@ -68,6 +68,22 @@ let mailboxParameters: IConfiguration -> MailboxParameters option =
             }
         | _ -> None
 
+type LoggingParameters =
+    {
+        LogDir: string
+        InfoFilename: string
+    }
+
+let loggingParameters: IConfiguration -> LoggingParameters option =
+    getConfig "Logging" <| fun exportSection ->
+        match (Load.read exportSection "LogDir", Load.read exportSection "InfoFilename") with
+        | Some logDir, Some infoFilename ->
+            Some {
+                LogDir = logDir
+                InfoFilename = infoFilename
+            }
+        | _ -> None
+
 type ExportParameters =
     {
         DestinationFolder: string
