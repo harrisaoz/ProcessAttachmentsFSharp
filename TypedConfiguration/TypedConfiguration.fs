@@ -74,6 +74,7 @@ type LoggingParameters =
         InfoFilename: string
         ErrorFilename: string
         TraceFilename: string option
+        ReportFilename: string option
     }
 
 let loggingParameters: IConfiguration -> LoggingParameters option =
@@ -82,14 +83,16 @@ let loggingParameters: IConfiguration -> LoggingParameters option =
             Load.read exportSection "LogDir",
             Load.read exportSection "InfoFilename",
             Load.read exportSection "ErrorFilename",
-            Load.read exportSection "TraceFilename"
+            Load.read exportSection "TraceFilename",
+            Load.read exportSection "ReportFilename"
             ) with
-        | Some logDir, Some infoFilename, Some errorFilename, maybeTraceFilename ->
+        | Some logDir, Some infoFile, Some errFile, traceFile, reportFile ->
             Some {
                 LogDir = logDir
-                InfoFilename = infoFilename
-                ErrorFilename = errorFilename
-                TraceFilename = maybeTraceFilename
+                InfoFilename = infoFile
+                ErrorFilename = errFile
+                TraceFilename = traceFile
+                ReportFilename = reportFile
             }
         | _ -> None
 

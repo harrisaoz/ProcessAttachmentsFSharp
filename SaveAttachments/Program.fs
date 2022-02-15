@@ -69,6 +69,7 @@ type LoggingParameters =
         Info: RelativeFilename
         Errors: RelativeFilename
         Trace: RelativeFilename option
+        Report: RelativeFilename option
     }
 
 type RuntimeParameters = GenericRuntimeParameters<ExtraParameters, LoggingParameters>
@@ -132,6 +133,7 @@ let main argv =
                         Info = RelativeFilename logging.InfoFilename
                         Errors = RelativeFilename logging.ErrorFilename
                         Trace = Option.map RelativeFilename logging.TraceFilename
+                        Report = Option.map RelativeFilename logging.ReportFilename
                     }
                 }
             parameters |> Result.Ok
@@ -391,7 +393,12 @@ let main argv =
             match parameters.LoggingDestinations.Trace with
             | Some traceFilename -> log parameters.LoggingDestinations.LogDir traceFilename
             | None -> fun _ -> ()
-        let report (msg: string) = printfn $"{msg}"
+        let report (msg: string) =
+            match parameters.LoggingDestinations.Report with
+            | Some reportFilename ->
+                log parameters.LoggingDestinations.LogDir reportFilename msg
+            | None ->
+                printfn $"{msg}"
 
         openSessionFromParameters trace parameters.SessionParameters
         |> Result.bind (rootFoldersViaSession trace parameters.ExtraParameters.SourceFolders)
