@@ -174,10 +174,10 @@ let main argv =
                 inform "\u2705  Create processing folders"
                 Ok (folder, (processed, attention))
             | Error msg, _ ->
-                inform $"\u274c  Create processing folders: [Processed folder = \"{processedSubfolderName}\"]"
+                inform $"\u26a0  Create processing folders: [Processed folder = \"{processedSubfolderName}\"]"
                 Error msg
             | _, Error msg ->
-                inform $"\u274c  Create processing folders: [Attention folder = \"{attentionSubfolderName}\"]"
+                inform $"\u26a0  Create processing folders: [Attention folder = \"{attentionSubfolderName}\"]"
                 Error msg
 
     let enumerateFolderMessages: Log -> IMailFolder * ProcFolders -> IMailFolder * ProcFolders * LazyList<IMessageSummary> =
@@ -235,7 +235,7 @@ let main argv =
                         inform $"+  Categorise attachment: [Type = {string attachment.ContentType.MimeType}] [Filename = \"{string attachment.FileName}\"]"
                         TernaryResult.Ok attachment
                     | false ->
-                        logError $"!\u274c Categorise attachment: [Type = {string attachment.ContentType.MimeType}] [Filename = \"{string attachment.FileName}\"]"
+                        logError $"!\u26a0 Categorise attachment: [Type = {string attachment.ContentType.MimeType}] [Filename = \"{string attachment.FileName}\"]"
                         TernaryResult.Error $"Missing or unsupported MIME type [Type = {string maybeContentType}]"
 
     let categoriseAttachments: Log * Log -> AttachmentCategorisationParameters -> LazyList<Result<MimePart, string>> ->
@@ -256,7 +256,7 @@ let main argv =
             | TernaryResult.Ignore ->
                 inform "~  Message attachments categorised: Message ignored"
             | TernaryResult.Error msg ->
-                logError $"!\u274c  Message attachments categorised: [{msg}]"
+                logError $"!\u26a0  Message attachments categorised: [{msg}]"
 
             (message, categorised)
             
@@ -316,10 +316,10 @@ let main argv =
                 |> L.map (fun (message, attachmentResult) ->
                     match attachmentResult with
                     | TernaryResult.Ok (_, sizeInBytes) ->
-                        report $">> move message: [Total size (bytes) = {string sizeInBytes}] [Subject = \"{string message.NormalizedSubject}\"]"
+                        report $">> Move message to {processed.FullName}: [Total size (bytes) = {string sizeInBytes}] [Subject = \"{string message.NormalizedSubject}\"]"
                         FTry.tryMoveMessageTo processed fromFolder message |> Result.map (fun uid -> (Some uid, None))
                     | _ ->
-                        report $">\u274c move message: [Subject = \"{string message.NormalizedSubject}\"]"
+                        report $">! Move message to {attention.FullName}: [Subject = \"{string message.NormalizedSubject}\"]"
                         FTry.tryMoveMessageTo attention fromFolder message |> Result.map (fun uid -> (None, Some uid))
                     )
                 |> L.fold (fun (processedSet, attentionSet) r ->
