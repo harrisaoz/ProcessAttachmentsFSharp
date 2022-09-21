@@ -20,6 +20,15 @@ let getClientFolder (selector: ImapClient -> FolderNamespace) (client: ImapClien
 
 let tryGetFolderInNamespace = getClientFolder
 
+let tryGetSubfolder: string -> IMailFolder -> Option<IMailFolder> =
+    fun childName parent ->
+        try
+            let child = parent.GetSubfolder(childName)
+            Some child
+        with
+            | :? OutOfMemoryException ->
+                reraise()
+            | _ -> None
 let tryOpenFolderInMode mode (folder: IMailFolder) =
     try
         match folder.Open(mode) with
@@ -63,6 +72,16 @@ let tryCreateSubfolderIfNotExists: IMailFolder -> string -> Result<IMailFolder, 
 
 let tryOpenFolder: IMailFolder -> Result<IMailFolder, string> =
     tryOpenFolderInMode FolderAccess.ReadOnly
+
+let tryOpenSubfolder: string -> IMailFolder -> Option<IMailFolder> =
+    fun childName parent ->
+        tryGetSubfolder childName parent
+        |> Option.bind (
+            fun subfolder ->
+                match tryOpenFolder subfolder with
+                | Error _ -> None
+                | Ok _ -> Some subfolder)
+        
 
 let tryOpenFolderWritable: IMailFolder -> Result<IMailFolder, string> =
     tryOpenFolderInMode FolderAccess.ReadWrite

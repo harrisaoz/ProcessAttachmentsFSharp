@@ -13,6 +13,7 @@
     <Compile Include="ImapMessage.fs" />
     <Compile Include="AttachmentNaming.fs" />
     <Compile Include="Categorise.fs" />
+    <Compile Include="Inbox.fs" />
   </ItemGroup>
 
   <ItemGroup>
