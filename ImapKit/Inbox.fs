@@ -19,7 +19,6 @@ module Gmail =
     let enumerateInbox: EnumerateInbox =
         listFoldersInNamespace clientDefaultPersonalNamespace
 
-    
 module MsExchange =
     // Output folder names are prepended by "INBOX" (e.g. INBOX/PAYROLL)
     let enumerateInbox: EnumerateInbox =
