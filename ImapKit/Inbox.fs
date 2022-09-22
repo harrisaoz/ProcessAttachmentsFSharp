@@ -38,7 +38,7 @@ let joinLabels (folder: IMailFolder) labels =
 
 let openDescendantFolder (parent: IMailFolder): FolderFullName -> IMailFolder option =
     let nextChild =
-        fun (maybeFolder: IMailFolder option) (childName: FolderName) ->
+        fun maybeFolder (childName: FolderName) ->
             maybeFolder |> Option.bind (tryOpenSubfolder childName)
 
     function
