@@ -1,9 +1,10 @@
-﻿module ProcessAttachments.ImapKit.TopLevelFolder
+﻿module ProcessAttachments.ImapKit.Inbox
 
 open MailKit
 open MailKit.Net.Imap
 open ProcessAttachments.ImapKit.ImapFolder
 open ProcessAttachments.ImapKit.FolderTry
+open ProcessAttachments.ImapKit.ImapService
 
 module RString = Combinators.String
 module Birds = Combinators.Standard
@@ -26,6 +27,11 @@ module MsExchange =
             client.Inbox
             |> tryOpenFolder
             |> Result.map (fun inbox -> inbox.GetSubfolders(false))
+
+let enumerateByProvider: Provider -> EnumerateInbox =
+    function
+    | Gmail -> Gmail.enumerateInbox
+    | MsExchange -> MsExchange.enumerateInbox
 
 let splitName (folder: IMailFolder) fullName =
     let folderNameAsLabels = RString.split
@@ -58,3 +64,10 @@ let getFolderByName: GetFolderByName =
                 |> Array.tail
                 |> joinLabels topMatch
                 |> openDescendantFolder topMatch)
+
+let selectNamedFolders inboxFolders =
+    Seq.choose (Birds.C getFolderByName inboxFolders)
+
+let selectFoldersFromInboxByName provider includeNames client =
+    enumerateByProvider provider client
+    |> Result.map (Birds.C selectNamedFolders includeNames)
