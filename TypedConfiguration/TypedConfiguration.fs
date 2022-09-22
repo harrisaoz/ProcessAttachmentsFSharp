@@ -86,13 +86,13 @@ type LoggingParameters =
     }
 
 let loggingParameters: IConfiguration -> LoggingParameters option =
-    getConfig "Logging" <| fun exportSection ->
+    getConfig "Logging" <| fun loggingSection ->
         match (
-            Load.read exportSection "LogDir",
-            Load.read exportSection "InfoFilename",
-            Load.read exportSection "ErrorFilename",
-            Load.read exportSection "TraceFilename",
-            Load.read exportSection "ReportFilename"
+            Load.read loggingSection "LogDir",
+            Load.read loggingSection "InfoFilename",
+            Load.read loggingSection "ErrorFilename",
+            Load.read loggingSection "TraceFilename",
+            Load.read loggingSection "ReportFilename"
             ) with
         | Some logDir, Some infoFile, Some errFile, traceFile, reportFile ->
             Some {
