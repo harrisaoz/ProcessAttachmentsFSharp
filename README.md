@@ -21,6 +21,7 @@ parameters.
     "ReportFilename": "example-report.log"
   },
   "ImapService": {
+    "Provider": "gmail",
     "Endpoint": {
       "Hostname": "some-imap-server.example.com",
       "Port": "993"

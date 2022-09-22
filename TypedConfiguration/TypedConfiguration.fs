@@ -14,6 +14,11 @@ let imapServiceSectionName = "ImapService"
 let inline getConfig name binder container =
     name |> (Load.section container >> Option.bind binder)
 
+let provider: IConfiguration -> ImapService.Provider option =
+    fun serviceSection ->
+        Load.read serviceSection "Provider"
+        |> Option.bind ImapService.providerByName
+
 let endpoint: IConfiguration -> ImapService.Endpoint option =
     getConfig "Endpoint" <| fun endpointSection ->
         let read = Load.read endpointSection
@@ -36,10 +41,13 @@ let credentials: IConfiguration -> System.Net.NetworkCredential option =
 
 let imapServiceParameters: IConfiguration -> ImapService.SessionParameters option =
     getConfig "ImapService" <| fun serviceSection ->
-        match (endpoint serviceSection, credentials serviceSection) with
-        | Some endpoint, Some credentials ->
+        match (provider serviceSection,
+               endpoint serviceSection,
+               credentials serviceSection) with
+        | Some provider, Some endpoint, Some credentials ->
             let parameters: ImapService.SessionParameters option =
                 Some {
+                    Provider = provider
                     Endpoint = endpoint
                     Credentials = credentials
                 }

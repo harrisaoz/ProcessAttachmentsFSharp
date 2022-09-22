@@ -4,6 +4,26 @@ open System.Net
 open MailKit.Net.Imap
 open MailKit.Security
 
+type Provider =
+    | Gmail
+    | MsExchange
+
+[<Literal>]
+let ProviderGmail = "gmail"
+[<Literal>]
+let ProviderMsExchange = "MsExchange"
+
+let providerName: Provider -> string =
+    function
+    | Gmail -> ProviderGmail
+    | MsExchange -> ProviderMsExchange
+
+let providerByName: string -> Provider option =
+    function
+    | ProviderGmail -> Some Gmail
+    | ProviderMsExchange -> Some MsExchange
+    | _ -> None
+
 type Endpoint =
     {
         Hostname: string
@@ -12,6 +32,7 @@ type Endpoint =
 
 type SessionParameters =
     {
+        Provider: Provider
         Endpoint: Endpoint
         Credentials: NetworkCredential
     }
