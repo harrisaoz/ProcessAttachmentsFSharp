@@ -3,6 +3,8 @@
     "SourceFolders": [
       "AmonitoredFolder",
       "AnotherFolder"
-    ]
+    ],
+    "OkSubfolder": "Processed",
+    "ErrorSubfolder": "Attention"
   }
 }

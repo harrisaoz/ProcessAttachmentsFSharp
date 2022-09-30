@@ -54,25 +54,31 @@ let imapServiceParameters: IConfiguration -> ImapService.SessionParameters optio
             parameters
         | _ -> None
 
+type MailFolderName = string
+
+type SourceMailFolders =
+    | SourceMailFolders of names: MailFolderName seq
+
+type OutputMailFolders =
+    | OutputMailFolders of ok: MailFolderName * error: MailFolderName
+
 type MailboxParameters =
     {
-        SourceFolders: string seq
-        ProcessedSubfolder: string
-        AttentionSubfolder: string
+        SourceFolders: SourceMailFolders
+        OutputMailFolders: OutputMailFolders
     }
 
 let mailboxParameters: IConfiguration -> MailboxParameters option =
     getConfig "Mailbox" <| fun mailboxSection ->
         let sourceFolders = Load.readMany mailboxSection "SourceFolders"
-        let processedSubfolder = Load.read mailboxSection "ProcessedSubfolder"
-        let attentionSubfolder = Load.read mailboxSection "AttentionSubfolder"
+        let okSubfolder = Load.read mailboxSection "OkSubfolder"
+        let errorSubfolder = Load.read mailboxSection "ErrorSubfolder"
 
-        match (sourceFolders |> List.ofSeq, processedSubfolder, attentionSubfolder) with
+        match (sourceFolders |> List.ofSeq, okSubfolder, errorSubfolder) with
         | _ :: _, Some processed, Some attention ->
             Some {
-                SourceFolders = sourceFolders
-                ProcessedSubfolder = processed
-                AttentionSubfolder = attention
+                SourceFolders = SourceMailFolders sourceFolders
+                OutputMailFolders = OutputMailFolders (processed, attention)
             }
         | _ -> None
 

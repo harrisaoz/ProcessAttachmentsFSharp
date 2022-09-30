@@ -6,28 +6,14 @@ module TC = TypedConfiguration
 module FS = ProcessAttachments.FileSystem
 
 type DestinationFolder = System.IO.DirectoryInfo
-type SourceFolders = string seq
-type PostProcessingFolderName = string
-
-type PostProcessingFolders =
-    {
-        Processed: PostProcessingFolderName
-        Attention: PostProcessingFolderName
-    }
-
-type GenericRuntimeParameters<'a, 'b> =
+type GenericRuntimeParameters<'a> =
     {
         SessionParameters: ProcessAttachments.ImapKit.ImapService.SessionParameters
         CategorisationParameters: TypedConfiguration.AttachmentCategorisationParameters
         DestinationFolder: DestinationFolder
-        ExtraParameters: 'a
-        PostProcessingFolders: PostProcessingFolders
-        LoggingDestinations: 'b
-    }
-
-type ExtraParameters =
-    {
-        SourceFolders: SourceFolders
+        SourceMailFolders: TC.SourceMailFolders
+        OutputMailFolders: TC.OutputMailFolders
+        LoggingDestinations: 'a
     }
 
 type AbsoluteFilename =
@@ -45,7 +31,7 @@ type LoggingParameters =
         Report: RelativeFilename option
     }
 
-type RuntimeParameters = GenericRuntimeParameters<ExtraParameters, LoggingParameters>
+type RuntimeParameters = GenericRuntimeParameters<LoggingParameters>
 type ParametersFromConfiguration = IConfiguration -> RuntimeParameters
 
 let parametersFromConfiguration (configuration: IConfiguration): Result<RuntimeParameters, string> =
@@ -59,15 +45,8 @@ let parametersFromConfiguration (configuration: IConfiguration): Result<RuntimeP
             SessionParameters = session
             CategorisationParameters = categorisation
             DestinationFolder = FS.assertFolder export.DestinationFolder
-            PostProcessingFolders =
-                {
-                    Processed = mailbox.ProcessedSubfolder
-                    Attention = mailbox.AttentionSubfolder
-                }
-            ExtraParameters =
-                {
-                    SourceFolders = mailbox.SourceFolders
-                }
+            SourceMailFolders = mailbox.SourceFolders
+            OutputMailFolders = mailbox.OutputMailFolders
             LoggingDestinations =
                 {
                     LogDir = AbsoluteFilename logging.LogDir

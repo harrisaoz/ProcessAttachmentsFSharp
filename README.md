@@ -36,8 +36,8 @@ parameters.
       "A-Top-Level-Folder",
       "Other-Top-Level-Folder/A-Subfolder"
     ],
-    "ProcessedSubfolder": "Processed",
-    "AttentionSubfolder": "Attention"
+    "OkSubfolder": "Processed",
+    "ErrorSubfolder": "Attention"
   },
   "Export": {
     "DestinationFolder": "\\\\some-fileserver\\a-fileshare\\processed-attachments"

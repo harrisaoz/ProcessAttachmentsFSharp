@@ -1,20 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="RuntimeParameters.fs"/>
-        <Compile Include="Program.fs"/>
-        <Compile Include="Core.fs"/>
+        <Compile Include="RuntimeParameters.fs" />
+        <Compile Include="Core.fs" />
+        <Compile Include="Program.fs" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Collections\Collections.fsproj"/>
-        <ProjectReference Include="..\Configuration\Configuration.fsproj"/>
-        <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj"/>
-        <ProjectReference Include="..\FileSystem\FileSystem.fsproj"/>
+        <ProjectReference Include="..\Collections\Collections.fsproj" />
+        <ProjectReference Include="..\Configuration\Configuration.fsproj" />
+        <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj" />
+        <ProjectReference Include="..\FileSystem\FileSystem.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FSharpx.Collections.Experimental" Version="3.0.1" />
     </ItemGroup>
 </Project>

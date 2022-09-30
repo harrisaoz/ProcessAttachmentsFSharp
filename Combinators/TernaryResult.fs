@@ -12,27 +12,15 @@ type TernaryResult<'a, 'Error> =
 module TernaryResult =
     open Standard
 
-    let inline bind f tr =
-        match tr with
-        | Ok x -> f x
-        | Ignore -> Ignore
-        | Error r -> Error r
-
-    let inline bindLogRejections log f tr =
-        match tr with
-        | Ok x -> f x
-        | Ignore -> Ignore
-        | Error r ->
-            log r
-            Error r
-
-    let inline map f = bind (f >> Ok)
-
     let inline bind2 v f c =
         match c with
         | Ok x -> f x
         | Ignore -> v
         | Error r -> Error r
+
+    let inline bind f = bind2 Ignore f
+
+    let inline map f = bind (f >> Ok)
 
     let ofResult r =
         match r with
@@ -55,12 +43,14 @@ module TernaryResult =
         | Ignore _ -> true
         | _ -> false
 
-    let groupResult (xs: LazyList<TernaryResult<'a, 'b>>): TernaryResult<LazyList<'a>, 'b> =
+    let SS f g h x = f (g x) (h x)
+
+    let groupResult xs: TernaryResult<LazyList<'a>, 'b> =
         let folder acc =
-            let accBind x =
-                bind2
-                    ((Seq.singleton >> L.ofSeq >> Ok) x)
-                    ((Seq.singleton >> L.ofSeq >> C L.append >> B Ok) x)
+            let accBind =
+                SS bind2
+                    (Seq.singleton >> L.ofSeq >> Ok)
+                    (Seq.singleton >> L.ofSeq >> C L.append >> B Ok)
 
             S bind2 (C accBind) acc
 

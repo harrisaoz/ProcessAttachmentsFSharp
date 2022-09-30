@@ -1,5 +1,6 @@
 {
   "ImapService": {
+    "Provider": "MsExchange",
     "Endpoint": {
       "Hostname": "imap.example.com",
       "Port": "999"
