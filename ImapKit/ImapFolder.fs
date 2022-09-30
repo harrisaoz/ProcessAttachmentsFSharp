@@ -31,6 +31,7 @@ let selectFoldersInNamespace (ns: ImapClient -> FolderNamespace) filter =
 let enumerateMessages searchQuery (folder: IMailFolder): Result<IMessageSummary seq, string> =
     let messageFields =
         MessageSummaryItems.UniqueId
+        ||| MessageSummaryItems.InternalDate
         ||| MessageSummaryItems.Envelope
         ||| MessageSummaryItems.GMailLabels
         ||| MessageSummaryItems.BodyStructure
