@@ -90,9 +90,7 @@ let enumerateMessageAttachments (Inform inform) sourceFolder message =
     ]
     L.ofSeq attachments
     
-// Todo: pass a more general ignore function, instead of assuming particular rules.
-// This also facilitates elimination of the dependency on TypedConfiguration.AttachmentCategorisationParameters.
-let categoriseAttachments (Inform inform, Alert alert) ignoreAtt accept attachments =
+let categoriseAttachments (Inform inform, Alert alert) (ignoreAtt, accept) attachments =
     let opDesc = "Categorise attachment" in
         let onOk part = inform "\u2705" opDesc (Cat.partInfo part)
         let onIgnore part = inform "~" opDesc (Cat.partInfo part)
@@ -114,7 +112,7 @@ let writeAttachmentToFile (Report report) destDir name (folder, message) attachm
     report0 [$"Filename = \"{localPart}\""]
     FS.fsWriteToFile Att.tryCopyAttachmentToStream (FS.absoluteName destDir localPart) attachment
 
-let saveMessageAttachments report destinationFolder name (folder, message) =
+let saveMessageAttachments report (destinationFolder, name) (folder, message) =
     L.map (writeAttachmentToFile report destinationFolder name (folder, message))
     >> TR.groupResult
     >> TR.map (L.fold (+) 0L)
@@ -126,7 +124,7 @@ let usingWritableFolder (Alert alert) fromFolder action =
     | Error msg ->
         alert "\u26a0" "Using writable folder" [$"Failed to open folder as writable = \"{msg}\""]
     
-let moveMessagesFromFolder (Report report) (ok, error) messages fromFolder =
+let moveMessagesFromFolder (Report report) (MoveToFolders (ok, error)) messages fromFolder =
     let desc = "Move message"
     let countUniqueIds (okSet, otherSet) (r: Result<UniqueId option * UniqueId option, string>) =
         match r with
@@ -154,7 +152,7 @@ let moveMessagesFromFolder (Report report) (ok, error) messages fromFolder =
             )
     |> L.fold countUniqueIds (Set.empty, Set.empty)
 
-let summarizeFolderActions (Report report) (folder: IMailFolder) messageExportResults okSet otherSet =
+let summarizeFolderActions (Report report) (folder: IMailFolder) messageExportResults (okSet, otherSet) =
     let exportResults = messageExportResults |> L.map snd
     let totalBytesExported =
         let sumBytes total =

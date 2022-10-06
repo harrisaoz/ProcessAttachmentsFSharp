@@ -40,6 +40,34 @@ let runWithConfiguredParameters prog =
     >> Result.bind Rtp.parametersFromConfiguration
     >> Result.bind prog
 
+let algorithm functions parameters =
+    let init, select, prep, ls, leaves, cat, export, feedbackInit, feedback, report = functions
+    let initParams,
+        selectParams,
+        prepParams,
+        catParams,
+        exportParams = parameters
+    
+    init initParams
+    |> Result.bind (select selectParams)
+    |> Result.map (Seq.map (
+        fun node ->
+            prep prepParams node
+            |> Result.map (
+                fun prepResult ->
+                    let exportResults =
+                        ls node
+                        |> L.map (
+                            fun x ->
+                                let exportDataResult =
+                                    leaves node x
+                                    |> (cat catParams)
+                                    |> TR.bind (export exportParams (node, x))
+                                (x, exportDataResult))
+                    feedbackInit node (
+                        feedback prepResult exportResults
+                        >> report node exportResults))))
+
 let exec =
     let program (parameters: Rtp.RuntimeParameters) =
         let logToFolder = logToFile parameters.LoggingDestinations.LogDir in
@@ -81,38 +109,22 @@ let exec =
                 AttName.chooseAlgorithmForFolderCount (Seq.length names)
                 |> AttName.computeAttachmentName
 
-        let openSessionFromParameters = Core.openSessionFromParameters trace0
-        let selectFolders = Core.selectFolders (trace0, alert0) (parameters.SourceMailFolders, parameters.SessionParameters.Provider)
-        let assertProcessingFolders = Core.assertProcessingFolders inform0 parameters.OutputMailFolders
-        let enumerateFolderMessages = Core.enumerateFolderMessages (inform0, alert0)
-        let enumerateMessageAttachments = Core.enumerateMessageAttachments inform0
-        let categoriseAttachments = Core.categoriseAttachments (inform0, alert0) ignoreAtt parameters.CategorisationParameters.AcceptedMimeTypes
-        let saveMessageAttachments = Core.saveMessageAttachments report0 parameters.DestinationFolder computeAttachmentName
-        let usingWritableFolder = Core.usingWritableFolder alert0
-        let moveMessagesFromFolder = Core.moveMessagesFromFolder report0
-        let summarizeFolderActions = Core.summarizeFolderActions report0
-
-        openSessionFromParameters parameters.SessionParameters
-        |> Result.bind selectFolders
-        |> Result.map (Seq.map (
-            fun folder ->
-                assertProcessingFolders folder
-                |> Result.map (
-                    fun (Core.MoveToFolders(ok, error)) ->
-                        let messageExportResults =
-                            enumerateFolderMessages folder
-                            |> L.map (
-                                fun message ->
-                                    let exportSizeResult =
-                                        enumerateMessageAttachments folder message
-                                        |> categoriseAttachments
-                                        |> TR.bind (saveMessageAttachments (folder, message))
-                                    (message, exportSizeResult))
-                        usingWritableFolder folder (
-                                moveMessagesFromFolder (ok, error) messageExportResults
-                                >> (fun (okSet, otherSet) ->
-                                    summarizeFolderActions folder messageExportResults okSet otherSet)))
-                                    ))
+        algorithm (
+           Core.openSessionFromParameters trace0,
+           Core.selectFolders (trace0, alert0),
+           Core.assertProcessingFolders inform0,
+           Core.enumerateFolderMessages (inform0, alert0),
+           Core.enumerateMessageAttachments inform0,
+           Core.categoriseAttachments (inform0, alert0),
+           Core.saveMessageAttachments report0,
+           Core.usingWritableFolder alert0,
+           Core.moveMessagesFromFolder report0,
+           Core.summarizeFolderActions report0) (
+             parameters.SessionParameters,
+             (parameters.SourceMailFolders, parameters.SessionParameters.Provider),
+             parameters.OutputMailFolders,
+             (ignoreAtt, parameters.CategorisationParameters.AcceptedMimeTypes),
+             (parameters.DestinationFolder, computeAttachmentName))
         |> (fun r ->
                 printfn "Execution Report"
                 match r with
