@@ -12,13 +12,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Collections\Collections.fsproj" />
-        <ProjectReference Include="..\Configuration\Configuration.fsproj" />
         <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj" />
-        <ProjectReference Include="..\FileSystem\FileSystem.fsproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="FSharpx.Collections.Experimental" Version="3.0.1" />
+        <PackageReference Include="FsCombinators" Version="0.3.0" />
+        <PackageReference Include="FsConfigLoader" Version="1.0.0" />
+        <PackageReference Include="FsSimpleFileIO" Version="1.0.0" />
+        <PackageReference Include="RoseTreeExtensions" Version="1.0.0" />
+        <PackageReference Include="FSharpx.Collections.Experimental" Version="3.0.1" />
     </ItemGroup>
 </Project>

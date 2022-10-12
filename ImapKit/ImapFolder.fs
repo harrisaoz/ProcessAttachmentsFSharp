@@ -6,10 +6,8 @@ open MimeKit
 
 open MailKit.Search
 open ProcessAttachments.ImapKit.FolderTry
-module Conv = ProcessAttachments.Collections.Conversions
-module BP = BodyParts
 
-let dfs = Conv.dfsPost tryOpenFolder tryGetSubfolders
+let dfs = RoseTreeExtensions.dfsPost tryOpenFolder tryGetSubfolders
 
 let clientDefaultPersonalNamespace =
     fun (client: ImapClient) ->

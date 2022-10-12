@@ -5,7 +5,7 @@ open MailKit
 open MailKit.Net.Imap
 open MimeKit
 
-module RTG = Collections.RoseTreeGermination.ResultBoxed
+module RTG = RoseTreeExtensions
 
 let inline tryWithAsResult (expression: unit -> 'a) =
     try

@@ -6,7 +6,7 @@ open TypedConfiguration
 
 module L = FSharpx.Collections.LazyList
 module Config = Configuration.Load
-module FS = ProcessAttachments.FileSystem
+module FS = FsSimpleFileIO
 module Rtp = RuntimeParameters
 module Cat = ProcessAttachments.ImapKit.Categorise
 module Att = ProcessAttachments.ImapKit.Attachment

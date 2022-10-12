@@ -10,7 +10,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Configuration\Configuration.fsproj" />
       <ProjectReference Include="..\ImapKit\ImapKit.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FsConfigLoader" Version="1.0.0" />
     </ItemGroup>
 </Project>

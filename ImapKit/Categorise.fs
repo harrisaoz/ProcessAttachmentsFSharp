@@ -2,7 +2,8 @@
 
 open FSharpx.Collections
 open MimeKit
-open Combinators
+open Combinators.TernaryResult
+module RSeq = Combinators.Seq
 
 [<Literal>]
 let PDF_Extension = ".pdf"
@@ -25,7 +26,7 @@ let contentTypesEqual: ContentType -> ContentType -> bool =
     fun a b -> a.IsMimeType(b.MediaType, b.MediaSubtype)
 
 let isContentType: ContentType seq -> ContentType option -> bool =
-    Seq.maybeExistsWhere contentTypesEqual
+    RSeq.maybeExistsWhere contentTypesEqual
 
 let tryGetFilename (attachment: MimePart) =
     attachment.FileName
@@ -66,6 +67,6 @@ module L = LazyList
 
 let categoriseAttachments boundActions ignoreAtt accept =
     L.map (
-        TernaryResult.ofResult
-        >> TernaryResult.bind (categoriseAttachment boundActions ignoreAtt accept))
-    >> TernaryResult.groupResult
+        ofResult
+        >> bind (categoriseAttachment boundActions ignoreAtt accept))
+    >> groupResult

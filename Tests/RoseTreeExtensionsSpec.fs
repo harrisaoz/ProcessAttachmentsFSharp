@@ -3,9 +3,9 @@
 open Xunit
 
 open FSharpx.Collections
-module L = LazyList
+open RoseTreeExtensions
 
-open Collections.RoseTreeGermination.ResultBoxed
+module L = LazyList
 
 [<Fact>]
 let ``The first element of listChildrenWithParent should be the input Result`` () =

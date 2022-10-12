@@ -18,13 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FsCombinators" Version="0.3.0" />
     <PackageReference Include="MailKit" Version="2.13.0" />
     <PackageReference Include="MimeKit" Version="2.13.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Collections\Collections.fsproj" />
-    <ProjectReference Include="..\Combinators\Combinators.fsproj" />
-    <ProjectReference Include="..\DomainInterface\DomainInterface.fsproj" />
+    <PackageReference Include="RoseTreeExtensions" Version="1.0.0" />
   </ItemGroup>
 </Project>

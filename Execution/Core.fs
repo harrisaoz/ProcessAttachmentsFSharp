@@ -4,11 +4,13 @@ open FSharpx.Collections
 open MimeKit
 open MailKit
 open Combinators.Logging
-open ProcessAttachments
 open ProcessAttachments.ImapKit.ImapService
 open TypedConfiguration
 
 module L = LazyList
+module Cat = ProcessAttachments.ImapKit.Categorise
+module TR = Combinators.TernaryResult
+module FS = FsSimpleFileIO
 
 module RString = Combinators.String
 module Birds = Combinators.Standard
@@ -78,9 +80,6 @@ let enumerateFolderMessages (Inform inform, Alert alert) folder =
 let appendToTuple2 (a, b) c =
     (a, b, c)
 
-module Cat = ProcessAttachments.ImapKit.Categorise
-type TernaryResult<'a, 'b> = Combinators.TernaryResult<'a, 'b>
-
 let enumerateMessageAttachments (Inform inform) sourceFolder message =
     let inform0 = inform "\u2705" "[Attachment] <- Message"
     let attachments = Message.dfsPre sourceFolder message
@@ -101,9 +100,6 @@ let categoriseAttachments (Inform inform, Alert alert) (ignoreAtt, accept) attac
         ignoreAtt
         accept
         attachments
-
-module FS = FileSystem
-module TR = Combinators.TernaryResult
 
 let writeAttachmentToFile (Report report) destDir name (folder, message) attachment =
     let report0 = report "+" "Export attachment"
@@ -134,7 +130,7 @@ let moveMessagesFromFolder (Report report) (MoveToFolders (ok, error)) messages 
 
     messages |> L.map (
         function
-        | message: IMessageSummary, TernaryResult.Ok bytesExported ->
+        | message: IMessageSummary, TR.Ok bytesExported ->
             report ">>" desc [
                 $"To folder = \"{ok}\""
                 $"Attachment bytes exported = {string bytesExported}"
@@ -157,7 +153,7 @@ let summarizeFolderActions (Report report) (folder: IMailFolder) messageExportRe
     let totalBytesExported =
         let sumBytes total =
             function
-            | TernaryResult.Ok byteCount -> total + byteCount
+            | TR.Ok byteCount -> total + byteCount
             | _ -> total
         L.fold sumBytes 0L
 

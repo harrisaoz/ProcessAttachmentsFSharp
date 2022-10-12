@@ -4,7 +4,7 @@ open System
 open MailKit
 open MimeKit
 
-module Conv = ProcessAttachments.Collections.Conversions
+module Conv = RoseTreeExtensions
 
 let asBasic (part: BodyPart) =
     match part with

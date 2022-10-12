@@ -2,7 +2,7 @@
 
 open Xunit
 
-module Conv = ProcessAttachments.Collections.Conversions
+module Rte = RoseTreeExtensions
 
 let lsCore1 x =
     match x with
@@ -25,7 +25,7 @@ let ``dfsPre 1: error at root`` () =
     let validate _ = Result.Error errorMsg
 
     let actual =
-        0 |> Conv.dfsPre validate ls |> Seq.toList
+        0 |> Rte.dfsPre validate ls |> Seq.toList
 
     Assert.Equal(Result.Error errorMsg, List.head actual)
     Assert.Equal(1, List.length actual)
@@ -36,7 +36,7 @@ let ``dfsPre 2: childless root`` () =
     let validate = Result.Ok
 
     let actual =
-        0 |> Conv.dfsPre validate ls |> Seq.toList
+        0 |> Rte.dfsPre validate ls |> Seq.toList
 
     Assert.Equal(Result.Ok 0, List.head actual)
     Assert.Equal(1, List.length actual)
@@ -47,7 +47,7 @@ let ``dfsPre 3: ok children`` () =
     let validate = Result.Ok
 
     let actual =
-        0 |> Conv.dfsPre validate ls |> Seq.toList
+        0 |> Rte.dfsPre validate ls |> Seq.toList
 
     Assert.Equal(4, List.length actual)
     Assert.Equal(Result.Ok 0, actual.Item(0))
@@ -66,7 +66,7 @@ let ``dfsPre 4: error children`` () =
         | _ -> Result.Error errorMsg
 
     let actual =
-        0 |> Conv.dfsPre validate ls |> Seq.toList
+        0 |> Rte.dfsPre validate ls |> Seq.toList
 
     Assert.Equal(4, List.length actual)
     Assert.Equal(Result.Ok 0, actual.Item(0))
@@ -80,7 +80,7 @@ let ``dfsPre 5: ok tree`` () =
     let validate = Result.Ok
 
     let actual =
-        0 |> Conv.dfsPre validate ls |> Seq.toList
+        0 |> Rte.dfsPre validate ls |> Seq.toList
 
     Assert.Equal(11, List.length actual)
 
@@ -104,7 +104,7 @@ let ``dfsPre 6: ok tree - non-root nodes should only be visited on demand`` () =
         | Result.Error msg -> failwith $"unexpected Error [{msg}]"
 
     let actual =
-        0 |> Conv.dfsPre validate ls |> Seq.map extractOk
+        0 |> Rte.dfsPre validate ls |> Seq.map extractOk
 
     Assert.Equal(0, visitCount)
     Assert.Equal([ 0 .. 10 ], actual)

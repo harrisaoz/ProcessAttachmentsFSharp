@@ -10,7 +10,7 @@
   <ItemGroup>
     <Compile Include="Collections.fs" />
     <Compile Include="Configuration.fs" />
-    <Compile Include="RoseTreeGerminationSpec.fs" />
+    <Compile Include="RoseTreeExtensionsSpec.fs" />
     <Compile Include="TernaryResultSpec.fs" />
     <Compile Include="Execution.fs" />
     <Compile Include="Tree.fs" />
@@ -27,7 +27,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="6.0.0" />
+    <PackageReference Include="FsConfigLoader" Version="1.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
+    <PackageReference Include="RoseTreeExtensions" Version="1.0.0" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -40,10 +42,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Combinators\Combinators.fsproj" />
-    <ProjectReference Include="..\Collections\Collections.fsproj" />
-    <ProjectReference Include="..\Configuration\Configuration.fsproj" />
-    <ProjectReference Include="..\DomainInterface\DomainInterface.fsproj" />
     <ProjectReference Include="..\Execution\Execution.fsproj" />
     <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj" />
   </ItemGroup>

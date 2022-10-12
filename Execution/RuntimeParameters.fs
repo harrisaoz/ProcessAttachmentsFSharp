@@ -3,7 +3,7 @@
 open Microsoft.Extensions.Configuration
 
 module TC = TypedConfiguration
-module FS = ProcessAttachments.FileSystem
+module FS = FsSimpleFileIO
 
 type DestinationFolder = System.IO.DirectoryInfo
 type GenericRuntimeParameters<'a> =
