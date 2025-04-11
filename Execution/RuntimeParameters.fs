@@ -3,7 +3,7 @@
 open Microsoft.Extensions.Configuration
 
 module TC = TypedConfiguration
-module FS = FsSimpleFileIO
+module FS = FsSimpleFileIO.Export
 
 type DestinationFolder = System.IO.DirectoryInfo
 type GenericRuntimeParameters<'a> =
@@ -41,20 +41,16 @@ let parametersFromConfiguration (configuration: IConfiguration): Result<RuntimeP
            TC.exportParameters configuration,
            TC.loggingParameters configuration) with
     | Some session, Some categorisation, Some mailbox, Some export, Some logging ->
-        let parameters = {
-            SessionParameters = session
-            CategorisationParameters = categorisation
-            DestinationFolder = FS.assertFolder export.DestinationFolder
-            SourceMailFolders = mailbox.SourceFolders
-            OutputMailFolders = mailbox.OutputMailFolders
-            LoggingDestinations =
-                {
-                    LogDir = AbsoluteFilename logging.LogDir
-                    Info = RelativeFilename logging.InfoFilename
-                    Errors = RelativeFilename logging.ErrorFilename
-                    Trace = Option.map RelativeFilename logging.TraceFilename
-                    Report = Option.map RelativeFilename logging.ReportFilename
-                }
-            }
-        parameters |> Result.Ok
+        { SessionParameters = session
+          CategorisationParameters = categorisation
+          DestinationFolder = FsSimpleFileIO.FileSystemExtensions.assertFolder export.DestinationFolder
+          SourceMailFolders = mailbox.SourceFolders
+          OutputMailFolders = mailbox.OutputMailFolders
+          LoggingDestinations =
+              { LogDir = AbsoluteFilename logging.LogDir
+                Info = RelativeFilename logging.InfoFilename
+                Errors = RelativeFilename logging.ErrorFilename
+                Trace = Option.map RelativeFilename logging.TraceFilename
+                Report = Option.map RelativeFilename logging.ReportFilename } }
+        |> Result.Ok
     | _ -> Result.Error "Failed to infer valid runtime parameters from the provided configuration"

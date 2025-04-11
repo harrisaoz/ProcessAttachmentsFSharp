@@ -1,22 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <PublishDir>publish</PublishDir>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <PublishDir>publish</PublishDir>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Include="Program.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include=".gitignore" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Execution\Execution.fsproj" />
-  </ItemGroup>
-  <Target Name="CustomClean" AfterTargets="Clean">
-    <RemoveDir Directories="$(PublishDir)" />
-    <RemoveDir Directories="$(OutDir)" />
-  </Target>
+    <ItemGroup>
+        <Compile Include="Program.fs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <None Include=".gitignore"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Execution\Execution.fsproj"/>
+    </ItemGroup>
+    <Target Name="CustomClean" AfterTargets="Clean">
+        <RemoveDir Directories="$(PublishDir)"/>
+        <RemoveDir Directories="$(OutDir)"/>
+    </Target>
 </Project>

@@ -2,8 +2,8 @@
 
 open FSharpx.Collections
 open MimeKit
-open Combinators.TernaryResult
-module RSeq = Combinators.Seq
+open FsCombinators.ExtraTypes
+module RSeq = FsCombinators.SeqExtensions
 
 [<Literal>]
 let PDF_Extension = ".pdf"
@@ -64,9 +64,10 @@ let categoriseAttachment (onOk, onIgnore, onError) ignoreAtt typeAccept (attachm
             Error $"Missing or unsupported MIME type [Type = {string maybeContentType}]"
 
 module L = LazyList
+module IrExt = ProcessAttachments.CommonExtensions.IgnorableResultExtensions
 
 let categoriseAttachments boundActions ignoreAtt accept =
     L.map (
-        ofResult
-        >> bind (categoriseAttachment boundActions ignoreAtt accept))
-    >> groupResult
+        IgnorableResult.ofResult
+        >> IgnorableResult.bind (categoriseAttachment boundActions ignoreAtt accept))
+    >> IrExt.groupResult

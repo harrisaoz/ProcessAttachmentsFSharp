@@ -2,7 +2,12 @@
 
 open Xunit
 
-open Combinators
+module SeqExt =
+    let inline collectOver (enumerate: 'a -> 'b seq): 'a seq -> ('a * 'b) seq =
+        Seq.collect (
+            fun x ->
+                enumerate x
+                |> Seq.map (fun y -> x, y))
 
 let e1 f x =
     match x with
@@ -29,7 +34,7 @@ let ``collectOver: rule 1 - the collector function should be applied exactly onc
     let f = e1 <| fun () -> callCounterMock <- callCounterMock + 1
     let xs = xs1 noop
 
-    Seq.collectOver f xs
+    SeqExt.collectOver f xs
     |> List.ofSeq
     |> ignore
 
@@ -43,7 +48,7 @@ let ``collectOver: rule 2 - the input sequence should be evaluated exactly once`
     let xs' = xs1 noop
     let xs = xs1 <| fun () -> callCounterMock <- callCounterMock + 1 
     
-    Seq.collectOver f xs
+    SeqExt.collectOver f xs
     |> List.ofSeq
     |> ignore
 
@@ -54,6 +59,6 @@ let ``collectOver: example 1`` () =
     let f = e1 noop
     let xs = xs1 noop
     
-    Seq.collectOver f xs
+    SeqExt.collectOver f xs
     |> fun actual ->
         Assert.Equal([(0,100); (0, 101); (1,102); (2,103); (2,104); (2,105)], actual)

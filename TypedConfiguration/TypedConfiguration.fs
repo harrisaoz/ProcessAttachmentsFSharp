@@ -2,57 +2,64 @@
 
 open FSharp.Json
 
-open Combinators.Standard
-open Combinators
-open Configuration
 open MimeKit
 open ProcessAttachments.ImapKit
 open Microsoft.Extensions.Configuration
 
+open FsCombinators.Core
+module Pair = FsCombinators.Tuple2
+module SeqExt = FsCombinators.SeqExtensions
+module StringExt = FsCombinators.StringExtensions
+
+module CfgRead = FsConfigLoader.Read
+module CfgParse = FsConfigLoader.Parsers
+
 let imapServiceSectionName = "ImapService"
 
-let inline getConfig name binder container =
-    name |> (Load.section container >> Option.bind binder)
+// let inline getConfig name binder container =
+//     name |> (Load.section container >> Option.bind binder)
 
 let provider: IConfiguration -> ImapService.Provider option =
     fun serviceSection ->
-        Load.read serviceSection "Provider"
+        CfgRead.read serviceSection "Provider"
         |> Option.bind ImapService.providerByName
 
 let endpoint: IConfiguration -> ImapService.Endpoint option =
-    getConfig "Endpoint" <| fun endpointSection ->
-        let read = Load.read endpointSection
-        let endpoint: ImapService.Endpoint option =
-            match (read "Hostname", read "Port") with
+    fun serviceSection ->
+        CfgRead.section serviceSection "Endpoint"
+        |> Option.bind (fun s ->
+            match (CfgRead.read s "Hostname", CfgRead.read s "Port") with
             | Some hostname, maybePort ->
                 Some {
                     Hostname = hostname
-                    Port = maybePort |> Option.bind Load.tryParseInt |> Option.defaultValue 993
+                    Port = maybePort |> Option.bind CfgParse.tryParseInt |> Option.defaultValue 993
                 }
-            | _ -> None
-        endpoint
+            | _ -> None)
 
 let credentials: IConfiguration -> System.Net.NetworkCredential option =
-    getConfig "Credentials" <| fun credentialsSection ->
-        let read = Load.read credentialsSection
-        match (read "Username", read "Password") with
-        | Some username, Some password -> Some (System.Net.NetworkCredential(username, password))
-        | _ -> None
+    fun serviceSection ->
+        CfgRead.section serviceSection "Credentials"
+        |> Option.bind (fun s ->
+            match (CfgRead.read s "Username", CfgRead.read s "Password") with
+            | Some username, Some password -> Some (System.Net.NetworkCredential(username, password))
+            | _ -> None)
 
 let imapServiceParameters: IConfiguration -> ImapService.SessionParameters option =
-    getConfig "ImapService" <| fun serviceSection ->
-        match (provider serviceSection,
-               endpoint serviceSection,
-               credentials serviceSection) with
-        | Some provider, Some endpoint, Some credentials ->
-            let parameters: ImapService.SessionParameters option =
-                Some {
-                    Provider = provider
-                    Endpoint = endpoint
-                    Credentials = credentials
-                }
-            parameters
-        | _ -> None
+    fun topLevelConfig ->
+        CfgRead.section topLevelConfig "ImapService"
+        |> Option.bind (fun serviceSection ->
+            match (provider serviceSection,
+                   endpoint serviceSection,
+                   credentials serviceSection) with
+            | Some provider, Some endpoint, Some credentials ->
+                let parameters: ImapService.SessionParameters option =
+                    Some {
+                        Provider = provider
+                        Endpoint = endpoint
+                        Credentials = credentials
+                    }
+                parameters
+            | _ -> None)
 
 type MailFolderName = string
 
@@ -69,18 +76,20 @@ type MailboxParameters =
     }
 
 let mailboxParameters: IConfiguration -> MailboxParameters option =
-    getConfig "Mailbox" <| fun mailboxSection ->
-        let sourceFolders = Load.readMany mailboxSection "SourceFolders"
-        let okSubfolder = Load.read mailboxSection "OkSubfolder"
-        let errorSubfolder = Load.read mailboxSection "ErrorSubfolder"
+    fun topLevelConfig ->
+        CfgRead.section topLevelConfig "Mailbox"
+        |> Option.bind (fun mailboxSection ->
+            let sourceFolders = CfgRead.readMany mailboxSection "SourceFolders"
+            let okSubfolder = CfgRead.read mailboxSection "OkSubfolder"
+            let errorSubfolder = CfgRead.read mailboxSection "ErrorSubfolder"
 
-        match (sourceFolders |> List.ofSeq, okSubfolder, errorSubfolder) with
-        | _ :: _, Some processed, Some attention ->
-            Some {
-                SourceFolders = SourceMailFolders sourceFolders
-                OutputMailFolders = OutputMailFolders (processed, attention)
-            }
-        | _ -> None
+            match (sourceFolders |> List.ofSeq, okSubfolder, errorSubfolder) with
+            | _ :: _, Some processed, Some attention ->
+                Some {
+                    SourceFolders = SourceMailFolders sourceFolders
+                    OutputMailFolders = OutputMailFolders (processed, attention)
+                }
+            | _ -> None)
 
 type LoggingParameters =
     {
@@ -91,24 +100,38 @@ type LoggingParameters =
         ReportFilename: string option
     }
 
+/// Supply the given onBind function with configuration parameter readers specific to the named section.
+/// The readers are provided in the context of an Option, as the named section may not exist in
+/// the provided configuration object.
+/// The onBind function should take a tuple of configuration reader functions:
+/// - childSection (gets a named subsection as an IConfiguration object)
+/// - read (get the value of a single configuration parameter in the section)
+/// - readMany (get all values associated with a multi-valued configuration parameter in the section).
+let sectionConfig: string -> ((string -> IConfiguration option) * (string -> string option) * (string -> string seq) -> 'a option) -> IConfiguration -> 'a option  =
+    fun sectionName onBind config ->
+        CfgRead.section config sectionName
+        |> Option.map (fun childSection ->
+            CfgRead.section childSection, CfgRead.read childSection, CfgRead.readMany childSection)
+        |> Option.bind onBind
+
 let loggingParameters: IConfiguration -> LoggingParameters option =
-    getConfig "Logging" <| fun loggingSection ->
-        match (
-            Load.read loggingSection "LogDir",
-            Load.read loggingSection "InfoFilename",
-            Load.read loggingSection "ErrorFilename",
-            Load.read loggingSection "TraceFilename",
-            Load.read loggingSection "ReportFilename"
-            ) with
-        | Some logDir, Some infoFile, Some errFile, traceFile, reportFile ->
-            Some {
-                LogDir = logDir
-                InfoFilename = infoFile
-                ErrorFilename = errFile
-                TraceFilename = traceFile
-                ReportFilename = reportFile
-            }
-        | _ -> None
+    sectionConfig "Logging"
+    <| (fun (_, read, _) ->
+            match (
+                read "LogDir",
+                read "InfoFilename",
+                read "ErrorFilename",
+                read "TraceFilename",
+                read "ReportFilename") with
+            | Some logDir, Some infoFile, Some errFile, traceFile, reportFile ->
+                Some {
+                    LogDir = logDir
+                    InfoFilename = infoFile
+                    ErrorFilename = errFile
+                    TraceFilename = traceFile
+                    ReportFilename = reportFile
+                }
+            | _ -> None)
 
 type ExportParameters =
     {
@@ -116,9 +139,10 @@ type ExportParameters =
     }
 
 let exportParameters: IConfiguration -> ExportParameters option =
-    getConfig "Export" <| fun exportSection ->
-        Load.read exportSection "DestinationFolder"
-        |> Option.map (fun dest -> { DestinationFolder = dest })
+    sectionConfig "Export"
+    <| (fun (_, read, _) ->
+        read "DestinationFolder"
+        |> Option.map (fun dest -> { DestinationFolder = dest }))
 
 let inline generateConfiguration configurationData =
     Json.serialize configurationData
@@ -131,10 +155,19 @@ type AttachmentCategorisationParameters =
     }
 
 let ignoreBasedOnFilename anywheres endings =
-    C Seq.existsPredicate <| seq
+    // let maybeExistsAnywheres = SeqExt.maybeExistsWhere StringExt.containsCI anywheres
+    // let maybeExistsEndings = SeqExt.maybeExistsWhere StringExt.endsWithCI endings
+    //
+    // fun maybeName ->
+    //     let result1 = (SeqExt.maybeExistsWhere) (StringExt.containsCI) anywheres maybeName
+    //     let result2 = (SeqExt.maybeExistsWhere) (StringExt.endsWithCI) endings maybeName
+    //     let result = result1 || result2
+    //     result
+
+    C SeqExt.existsPredicate <| seq
         {
-            Seq.maybeExistsWhere String.containsCI anywheres
-            Seq.maybeExistsWhere String.endsWithCI endings
+            SeqExt.maybeExistsWhere (C StringExt.containsCI) anywheres
+            SeqExt.maybeExistsWhere (C StringExt.endsWithCI) endings
         }
 
 let categorisationParameters: IConfiguration -> AttachmentCategorisationParameters option =
@@ -150,31 +183,29 @@ let categorisationParameters: IConfiguration -> AttachmentCategorisationParamete
                 yield x0
         }
 
-    let readAsContentTypes section subsection =
-        Load.readMany section subsection
-        |> Seq.map contentTypeFromString
-        |> Seq.fold (fun contentTypes contentTypeOption ->
+    let readAsContentTypes =
+        Seq.map contentTypeFromString
+        >> Seq.fold (fun contentTypes contentTypeOption ->
             match contentTypeOption with
             | Some contentType -> cons contentType contentTypes
             | None -> contentTypes) Seq.empty
 
-    let ignoreFilenameSection section =
-        Load.section section "IgnoreFilename"
+    sectionConfig "Categorisation"
+    <| (fun (childSection, _, readMany) ->
+            let acceptedMimeTypes, ignoredMimeTypes =
+                Pair.map (readMany >> readAsContentTypes) ("AcceptedMimeTypes", "IgnoredMimeTypes")
 
-    getConfig "Categorisation" <| fun section ->
-        let acceptedMimeTypes, ignoredMimeTypes =
-            Pair.map (readAsContentTypes section) "AcceptedMimeTypes" "IgnoredMimeTypes"
-        let ignoreContains, ignoreEndsWith =
-            match ignoreFilenameSection section with
-            | Some filenameSection ->
-                Pair.map (Load.readMany filenameSection) "Contains" "EndsWith"
-            | None -> (Seq.empty, Seq.empty)
-
-        if (Seq.isEmpty acceptedMimeTypes && Seq.isEmpty ignoredMimeTypes) then
-            None
-        else
-            Some {
-                AcceptedMimeTypes = acceptedMimeTypes
-                IgnoredMimeTypes = ignoredMimeTypes
-                IgnoreBasedOnFilename = ignoreBasedOnFilename ignoreContains ignoreEndsWith
-            }
+            let ignoreContains, ignoreEndsWith =
+                match (childSection "IgnoreFilename") with
+                | Some filenameSection ->
+                    Pair.map (CfgRead.readMany filenameSection) ("Contains", "EndsWith")
+                | None -> Seq.empty, Seq.empty
+            
+            if (Seq.isEmpty acceptedMimeTypes && Seq.isEmpty ignoredMimeTypes) then
+                None
+            else
+                Some {
+                    AcceptedMimeTypes = acceptedMimeTypes
+                    IgnoredMimeTypes = ignoredMimeTypes
+                    IgnoreBasedOnFilename = ignoreBasedOnFilename ignoreContains ignoreEndsWith
+                })

@@ -4,7 +4,7 @@ open System
 open MailKit
 open MimeKit
 
-module RString = Combinators.String
+module RString = FsCombinators.StringExtensions
 
 open Message
 open ProcessAttachments.ImapKit.Attachment
@@ -39,7 +39,7 @@ let digestFallbackLabel (attachment: MimePart) =
     |> (fun digest -> $"{digest.Substring(0, 8)}")
 
 let composeName parts =
-    RString.join "_" parts
+    String.concat "_" parts
 
 let cleanFilename = RString.split IllegalCharacters >> composeName
 
@@ -77,7 +77,7 @@ module InvoiceNaming =
             let folderName =
                 folder.FullName
                 |> RString.split [| folder.DirectorySeparator |]
-                |> RString.join "__"
+                |> String.concat "__"
             let timestamp =
                 monthPart envelopeDate message
             let filename =

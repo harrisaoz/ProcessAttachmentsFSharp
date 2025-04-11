@@ -1,26 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="Attachment.fs"/>
+        <Compile Include="FolderTry.fs"/>
+        <Compile Include="ImapService.fs"/>
+        <Compile Include="BodyParts.fs"/>
+        <Compile Include="ImapFolder.fs"/>
+        <Compile Include="Message.fs"/>
+        <Compile Include="AttachmentNaming.fs"/>
+        <Compile Include="Categorise.fs"/>
+        <Compile Include="Inbox.fs"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="Attachment.fs" />
-    <Compile Include="FolderTry.fs" />
-    <Compile Include="ImapService.fs" />
-    <Compile Include="BodyParts.fs" />
-    <Compile Include="ImapFolder.fs" />
-    <Compile Include="Message.fs" />
-    <Compile Include="AttachmentNaming.fs" />
-    <Compile Include="Categorise.fs" />
-    <Compile Include="Inbox.fs" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="FsCombinators" Version="0.10.0"/>
+        <PackageReference Include="MailKit" Version="2.13.0"/>
+        <PackageReference Include="MimeKit" Version="2.13.0"/>
+        <PackageReference Include="RoseTreeExtensions" Version="1.0.0"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FsCombinators" Version="0.3.0" />
-    <PackageReference Include="MailKit" Version="2.13.0" />
-    <PackageReference Include="MimeKit" Version="2.13.0" />
-    <PackageReference Include="RoseTreeExtensions" Version="1.0.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\CommonExtensions\CommonExtensions.fsproj"/>
+    </ItemGroup>
 </Project>

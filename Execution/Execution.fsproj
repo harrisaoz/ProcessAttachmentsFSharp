@@ -1,25 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="RuntimeParameters.fs" />
-        <Compile Include="Core.fs" />
-        <Compile Include="Program.fs" />
+        <Compile Include="RuntimeParameters.fs"/>
+        <Compile Include="Logging.fs"/>
+        <Compile Include="Core.fs"/>
+        <Compile Include="Program.fs"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj" />
+        <ProjectReference Include="..\CommonExtensions\CommonExtensions.fsproj"/>
+        <ProjectReference Include="..\TypedConfiguration\TypedConfiguration.fsproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="FsCombinators" Version="0.3.0" />
-        <PackageReference Include="FsConfigLoader" Version="1.0.0" />
-        <PackageReference Include="FsSimpleFileIO" Version="1.0.0" />
-        <PackageReference Include="RoseTreeExtensions" Version="1.0.0" />
-        <PackageReference Include="FSharpx.Collections.Experimental" Version="3.0.1" />
+        <PackageReference Include="FsCombinators" Version="0.10.0"/>
+        <PackageReference Include="FsConfigLoader" Version="0.1.2"/>
+        <PackageReference Include="FsSimpleFileIO" Version="0.2.1"/>
+        <PackageReference Include="RoseTreeExtensions" Version="1.0.0"/>
+        <PackageReference Include="FSharpx.Collections.Experimental" Version="3.0.1"/>
     </ItemGroup>
 </Project>

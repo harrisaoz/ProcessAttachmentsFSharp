@@ -6,8 +6,8 @@ open ProcessAttachments.ImapKit.ImapFolder
 open ProcessAttachments.ImapKit.FolderTry
 open ProcessAttachments.ImapKit.ImapService
 
-module RString = Combinators.String
-module Birds = Combinators.Standard
+module RString = FsCombinators.StringExtensions
+module Birds = FsCombinators.Core
 
 type FolderFullName = string
 type FolderName = string
@@ -39,7 +39,7 @@ let splitName (folder: IMailFolder) fullName =
     folderNameAsLabels [|folder.DirectorySeparator|] fullName
 
 let joinLabels (folder: IMailFolder) labels =
-    RString.join $"{folder.DirectorySeparator}" labels
+    String.concat $"{folder.DirectorySeparator}" labels
 
 let openDescendantFolder (parent: IMailFolder): FolderFullName -> IMailFolder option =
     let nextChild =
