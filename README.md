@@ -1,5 +1,12 @@
 # Build Instructions
 
+This project depends on the following packages published to github.com/harrisaoz:
+- FsConfigLoader
+- FsSimpleFileIO
+
+In order to retrieve these packages, read access to the packages must be obtained or
+the projects can be built and packaged locally.
+
 # Usage
 
 ./SaveAttachments/publish/SaveAttachments.exe [json-config-file]
